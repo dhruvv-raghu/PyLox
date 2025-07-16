@@ -24,7 +24,7 @@ def main():
             while True:
                 scanner.parentheses()
         except EOFError:
-            print("EOF null")  # Optional, you can also just leave it empty
+            print("EOF  null")
 
 if __name__ == "__main__":
     main()
