@@ -18,16 +18,13 @@ def main():
 
     print("Logs from your program will appear here!", file=sys.stderr)
 
-
     if file_contents:
-       scanner= ParenthesesScanner(file_contents)
-       try:
-        while True:
+        scanner = ParenthesesScanner(file_contents)
+        try:
+            while True:
                 scanner.parentheses()
-       except EOFError:
-            print()
-
-
+        except EOFError:
+            print("EOF null")  # Optional, you can also just leave it empty
 
 if __name__ == "__main__":
     main()
