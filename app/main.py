@@ -1,5 +1,5 @@
 import sys
-
+from scan_for.parentheses import ParenthesesScanner
 
 def main():
     if len(sys.argv) < 3:
@@ -20,9 +20,13 @@ def main():
 
 
     if file_contents:
-        raise NotImplementedError("Scanner not implemented")
-    else:
-        print("EOF  null") 
+       scanner= ParenthesesScanner(file_contents)
+       try:
+        while True:
+                scanner.parentheses()
+       except EOFError:
+            print()
+
 
 
 if __name__ == "__main__":
