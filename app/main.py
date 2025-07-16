@@ -16,7 +16,6 @@ def main():
     with open(filename) as file:
         file_contents = file.read()
 
-    # You can use print statements as follows for debugging, they'll be visible when running tests.
     print("Logs from your program will appear here!", file=sys.stderr)
 
 
