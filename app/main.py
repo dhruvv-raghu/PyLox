@@ -16,8 +16,6 @@ def main():
     with open(filename) as file:
         file_contents = file.read()
 
-    print("Logs from your program will appear here!", file=sys.stderr)
-
     if file_contents:
         scanner = ParenthesesScanner(file_contents)
         try:
