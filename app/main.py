@@ -16,12 +16,11 @@ def main():
     with open(filename) as file:
         file_contents = file.read()
 
-    if file_contents:
-        scanner = ParenthesesScanner(file_contents)
-        try:
-            while True:
-                scanner.parentheses()
-        except EOFError:
+    scanner = ParenthesesScanner(file_contents)
+    try:
+        while True:
+            scanner.parentheses()
+    except EOFError:
             print("EOF  null")
 
 if __name__ == "__main__":
