@@ -1,7 +1,8 @@
 class ParenthesesScanner:
     def __init__(self, file_contents):
         self.file_contents= file_contents
-        self.pos= 0
+        self.current_char = None
+        self.pos= -1
         
 
     def move_next(self):
@@ -15,16 +16,19 @@ class ParenthesesScanner:
             return self.current_char
             
     def parentheses(self):
-        move_next = self.move_next
+       try:
+        self.move_next()
         
-        if move_next == '(':
-            self.move_next()
+        if self.current_char == '(':
             print("LPAREN {self.current_char} null")
         elif self.current_char == ')':
-            self.move_next()
             print("RPAREN {self.current_char} null")
         elif self.current_char is None:
             print("EOF null")
             return EOFError("End of file reached")
         else:
             raise ValueError(f"Unexpected character: {self.current_char}")
+       
+       except EOFError:
+            print("EOF null")
+            return EOFError("End of file reached")
