@@ -16,6 +16,7 @@ class ParenthesesScanner:
     def parentheses(self):
         if self.pos+1 >= len(self.file_contents):
             raise EOFError("End of file reached")
+            return
         self.move_next()  # Let it raise EOFError naturally if needed
 
         if self.current_char == '(':
