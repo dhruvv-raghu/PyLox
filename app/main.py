@@ -1,5 +1,5 @@
 import sys
-from scan_for.parentheses import ParenthesesScanner
+from app.scan_for.parentheses import ParenthesesScanner
 
 def main():
     if len(sys.argv) < 3:
