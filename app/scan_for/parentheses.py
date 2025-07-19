@@ -23,4 +23,6 @@ class ParenthesesScanner:
         if self.current_char in self.check:
             token_type = self.check[self.current_char]
             print(f"{token_type} {self.current_char} null")
+        else:
             raise ValueError(f"Unexpected character: {self.current_char}")
+        
