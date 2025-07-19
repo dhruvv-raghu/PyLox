@@ -41,7 +41,6 @@ class ParenthesesScanner:
         char = self.current_char()
         
         if char == '\n':
-            print("NEWLINE \\n null")
             self.advance()
             return
         
