@@ -47,14 +47,14 @@ class ParenthesesScanner:
             return
         
         if char == '=':
-            if self.peek_next == '=':
+            if self.peek_next() == '=':  # Fixed: Added () to call the method
                 print("EQUAL_EQUAL == null")
                 self.advance()
                 self.advance()
             else:
                 print("EQUAL = null")
                 self.advance()
-        pass
+            return  # Fixed: Added return to prevent fall-through
 
         
         if char in self.operations:
