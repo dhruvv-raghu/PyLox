@@ -65,7 +65,27 @@ class ParenthesesScanner:
                 else:
                     print("BANG ! null")
                     self.advance()
-                return 
+                return
+            
+            case '<':
+                if self.peek_next() == '=':
+                    print("LESS_EQUAL <= null")
+                    self.advance()
+                    self.advance()
+                else:
+                    print("LESS < null")
+                    self.advance()
+                return
+            
+            case '>':
+                if self.peek_next() == '=':
+                    print("GREATER_EQUAL >= null")
+                    self.advance()
+                    self.advance()
+                else:
+                    print("GREATER > null")
+                    self.advance()
+                return
 
         
         if char in self.operations:
