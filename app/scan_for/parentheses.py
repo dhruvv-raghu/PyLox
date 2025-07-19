@@ -55,6 +55,7 @@ class ParenthesesScanner:
                else:
                   print("EQUAL = null")
                   self.advance()
+                  return 
 
             case '!':
                 if self.peek_next() == '=':
@@ -64,8 +65,7 @@ class ParenthesesScanner:
                 else:
                     print("BANG ! null")
                     self.advance()
-
-        return 
+                return 
 
         
         if char in self.operations:
