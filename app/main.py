@@ -18,7 +18,7 @@ def main():
         while True:
             try:
               scanner.parentheses()
-            except ValueError():
+            except ValueError:
                pass
     except EOFError:
             print("EOF  null")
