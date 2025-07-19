@@ -22,6 +22,9 @@ def main():
     except EOFError:
             print("EOF  null")
     except ValueError as e:
+         print(f"[line 1] Error: Unexpected character: {self.current_char}")
+        
+    if scanner.has_error:
         exit(65)
 
 if __name__ == "__main__":

@@ -13,13 +13,12 @@ class ParenthesesScanner:
         self.check= Operations
         self.move_next()
         self.line_number = 1
+        self.has_error = False
 
     def move_next(self):
         self.pos += 1
         if self.pos < len(self.file_contents):
             self.current_char = self.file_contents[self.pos]
-            if self.current_char == '\n':
-                self.line_number += 1
         
         else:
             self.current_char = None
@@ -32,12 +31,13 @@ class ParenthesesScanner:
             return
         self.move_next() 
         
-        try:
-         if self.current_char in self.check:
+        
+        if self.current_char in self.check:
             token_type = self.check[self.current_char]
             print(f"{token_type} {self.current_char} null")
-         else:
-            raise ValueError(f"[line {self.line_number}] Error: Unexpected character: {self.current_char}")
-        except ValueError as e:
-            raise ValueError(f"[line {self.line_number}] Error: Unexpected character: {self.current_char}")
+        else:
+             
+            self.has_error = True  
+            raise ValueError()
+        
             
