@@ -39,5 +39,5 @@ class ParenthesesScanner:
          else:
             raise ValueError(f"[line {self.line_number}] Error: Unexpected character: {self.current_char}")
         except ValueError as e:
-            print()
+            raise ValueError(f"[line {self.line_number}] Error: Unexpected character: {self.current_char}")
             
