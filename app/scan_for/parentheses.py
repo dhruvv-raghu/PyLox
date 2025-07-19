@@ -3,6 +3,7 @@ class ParenthesesScanner:
         self.file_contents = file_contents
         self.current_char = None
         self.pos = -1
+        self.check= {'(': 'LEFT_PAREN', ')': 'RIGHT_PAREN', '{': 'LEFT_BRACE', '}': 'RIGHT_BRACE'}
 
     def move_next(self):
         self.pos += 1
@@ -18,10 +19,8 @@ class ParenthesesScanner:
             raise EOFError("End of file reached")
             return
         self.move_next()  # Let it raise EOFError naturally if needed
-
-        if self.current_char == '(':
-            print(f"LEFT_PAREN {self.current_char} null")
-        elif self.current_char == ')':
-            print(f"RIGHT_PAREN {self.current_char} null")
-        else:
+        
+        if self.current_char in self.check:
+            token_type = self.check[self.current_char]
+            print(f"{token_type} {self.current_char} null")
             raise ValueError(f"Unexpected character: {self.current_char}")
