@@ -19,7 +19,7 @@ def main():
             try:
               scanner.parentheses()
             except ValueError:
-               exit(65)
+               scanner.has_error = True
     except EOFError:
             print("EOF  null")
 
