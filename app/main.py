@@ -13,17 +13,16 @@ def main():
         print(f"Unknown command: {command}", file=sys.stderr)
         exit(1)
 
-
-
     scanner = ParenthesesScanner(filename)
     try:
         while True:
-            scanner.parentheses()
+            try:
+              scanner.parentheses()
+            except ValueError():
+               pass
     except EOFError:
             print("EOF  null")
-    except ValueError as e:
-        pass 
-        
+
         
     if scanner.has_error:
         exit(65)
