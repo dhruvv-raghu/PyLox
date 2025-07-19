@@ -86,6 +86,17 @@ class ParenthesesScanner:
                     print("GREATER > null")
                     self.advance()
                 return
+            
+            case '/':
+                if self.peek_next() == '/':
+                    # Single-line comment
+                    while self.current_char() and self.current_char() != '\n':
+                        self.advance()
+                    return
+                else:
+                    print("SLASH / null")
+                    self.advance()
+                return
 
         
         if char in self.operations:
