@@ -21,6 +21,8 @@ def main():
             scanner.parentheses()
     except EOFError:
             print("EOF  null")
+    except ValueError as e:
+        exit(65)
 
 if __name__ == "__main__":
     main()
