@@ -46,7 +46,7 @@ class ParenthesesScanner:
         
         match char:
             case '=':
-                if self.peek_next() == '=':  # Fixed: Added () to call the method
+                if self.peek_next() == '=': 
                    print("EQUAL_EQUAL == null")
                    self.advance()
                    self.advance()
