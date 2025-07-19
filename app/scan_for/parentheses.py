@@ -3,7 +3,9 @@ class ParenthesesScanner:
         self.file_contents = file_contents
         self.current_char = None
         self.pos = -1
-        self.check= {'(': 'LEFT_PAREN', ')': 'RIGHT_PAREN', '{': 'LEFT_BRACE', '}': 'RIGHT_BRACE'}
+        self.check= {'(': 'LEFT_PAREN', ')': 'RIGHT_PAREN', '{': 'LEFT_BRACE', '}': 'RIGHT_BRACE',
+                     '.': 'DOT', ',': 'COMMA', ';': 'SEMICOLON', '/': 'SLASH', '*': 'STAR',
+                     '+': 'PLUS', '-': 'MINUS'}
 
     def move_next(self):
         self.pos += 1
