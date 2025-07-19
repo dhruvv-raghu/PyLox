@@ -26,6 +26,11 @@ class ParenthesesScanner:
                 self.line_number += 1
             self.pos += 1
 
+    def peek_next(self):
+        if self.pos + 1 >= len(self.file_contents):
+            return None
+        return self.file_contents[self.pos + 1]
+
     def scan_token(self):
         # Skip whitespace (except newlines, which we handle separately)
         while self.current_char() and self.current_char() in ' \t\r':
@@ -40,6 +45,16 @@ class ParenthesesScanner:
             print("NEWLINE \\n null")
             self.advance()
             return
+        
+        if char == '=':
+            if self.peek_next == '=':
+                print("EQUAL_EQUAL == null")
+                self.advance()
+                self.advance()
+            else:
+                print("EQUAL = null")
+                self.advance()
+
         
         if char in self.operations:
             token_type = self.operations[char]
