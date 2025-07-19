@@ -61,8 +61,11 @@ class ParenthesesScanner:
                     print("BANG_EQUAL != null")
                     self.advance()
                     self.advance()
+                else:
+                    print("BANG ! null")
+                    self.advance()
 
-        return  # Fixed: Added return to prevent fall-through
+        return 
 
         
         if char in self.operations:
