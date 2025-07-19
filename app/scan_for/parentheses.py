@@ -33,7 +33,7 @@ class ParenthesesScanner:
         self.move_next() 
         
         
-        if self.current_char in self.check:
+        if self.current_char in self.check.keys():
             token_type = self.check[self.current_char]
             print(f"{token_type} {self.current_char} null")
             if self.current_char == '\n':
