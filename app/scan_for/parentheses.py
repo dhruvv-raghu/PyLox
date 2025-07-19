@@ -54,7 +54,7 @@ class ParenthesesScanner:
             else:
                 print("EQUAL = null")
                 self.advance()
-        return
+        pass
 
         
         if char in self.operations:
