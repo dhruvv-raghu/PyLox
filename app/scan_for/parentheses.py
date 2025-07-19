@@ -32,7 +32,6 @@ class ParenthesesScanner:
         return self.file_contents[self.pos + 1]
 
     def scan_token(self):
-        # Skip whitespace (except newlines, which we handle separately)
         while self.current_char() and self.current_char() in ' \t\r':
             self.advance()
         
