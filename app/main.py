@@ -16,13 +16,9 @@ def main():
     scanner = ParenthesesScanner(filename)
     try:
         while True:
-            try:
-              scanner.parentheses()
-            except ValueError:
-               scanner.has_error = True
+            scanner.scan_token()
     except EOFError:
-            print("EOF  null")
-
+        print("EOF  null")
         
     if scanner.has_error:
         exit(65)
