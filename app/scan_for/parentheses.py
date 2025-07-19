@@ -35,9 +35,12 @@ class ParenthesesScanner:
         if self.current_char in self.check:
             token_type = self.check[self.current_char]
             print(f"{token_type} {self.current_char} null")
+            if self.current_char == '\n':
+                self.line_number += 1
         else:
              
             self.has_error = True  
+            print(f"[line {self.line_number}] Error: Unexpected character: {self.current_char}", file=sys.stderr)
             raise ValueError()
-        
+            
             
