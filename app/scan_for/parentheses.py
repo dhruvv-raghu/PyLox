@@ -1,6 +1,8 @@
 from app.scan_for.operations import Operations
 import sys
 from app.scan_for.tokens import Token
+from app.scan_for.escseq import EscapeSequences
+from app.scan_for.characters import CharacterSet
 
 class ParenthesesScanner:
     def __init__(self, filename):
@@ -15,8 +17,40 @@ class ParenthesesScanner:
         self.line_number = 1
         self.has_error = False
         self.operations = Operations
+        self.characters = CharacterSet
+        self.escape_sequences = EscapeSequences
         self.tokens= []
+    
 
+    def string_scanner(self):
+        self.string= ""
+        self.start_line = self.line_number
+        self.advance()
+
+        while self.current_char() and self.current_char() != '"':
+            char= self.current_char()
+            if char == '\n':
+                self.line_number += 1
+                self.string += char
+            elif char == '\\' and self.peek_next() is not None:
+                self.advance()
+                esc_char = self.peek_next()
+                if esc_char in self.escape_sequences:
+                    self.string += self.escape_sequences[esc_char]
+                else:
+                    self.string += esc_char
+            else:
+                self.string += char
+
+            self.advance()
+
+        if self.current_char() is None:
+            self.has_error = True
+            print(f"[line {self.start_line}] Error: Unterminated string", file=sys.stderr)
+            return self.add_token("STRING",f'"{self.string}', self.string)
+        
+        self.advance()  # Skip the closing quote
+        return self.add_token("STRING", f'"{self.string}"', self.string)
     
 
     def current_char(self):
@@ -53,6 +87,9 @@ class ParenthesesScanner:
             token = self.add_token("NEWLINE", char)
             self.advance()
             return token
+        
+        if char == '"':
+            return self.string_scanner()
         
         match char:
             case '=':
@@ -107,7 +144,7 @@ class ParenthesesScanner:
                 return
 
         
-        if char in self.operations:
+        if char in self.operations | self.characters:
             token_type = self.operations[char]
             token = self.add_token(token_type, char)
             self.advance()
