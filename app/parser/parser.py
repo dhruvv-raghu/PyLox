@@ -30,6 +30,9 @@ class Parser:
         elif self.match("NIL"):
             return Literal(None)
         
+        if self.match("NUMBER", "STRING"):
+            return Literal(self.previous().literal)
+        
     def match(self, *token_types):
         for token_type in token_types:
             if self.check(token_type):
