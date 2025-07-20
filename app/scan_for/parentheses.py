@@ -182,10 +182,7 @@ class ParenthesesScanner:
 
         self.pos = -1
         while self.pos < len(self.file_contents) - 1:
-            token = self.scan_token()
-            if token:
-                literal_to_print = token.literal if token.literal is not None else "null"
-                print(f"{token.type} {token.lexeme} {literal_to_print}")
-        
+            self.scan_token()
+
         self.add_token("EOF",'', None)
         return self.tokens 

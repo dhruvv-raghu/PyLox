@@ -13,6 +13,11 @@ class Parser:
         except Exception as e:
             print(f"Error parsing expression: {e}", file=sys.stderr)
             return None
+        
+    def check(self, token_type):
+        if self.is_at_end():
+            return False
+        return self.peek().type == token_type
 
     def expression(self):
         return self.primary()
