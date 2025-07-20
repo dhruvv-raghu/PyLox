@@ -21,12 +21,36 @@ class ParenthesesScanner:
         self.escape_sequences = EscapeSequences
         self.tokens= []
     
+    def number_scanner(self):
+        start_pos = self.pos
+        while self.peek_next() and self.peek_next().isdigit():
+            self.advance()
+
+        if self.peek_next() == '.' and self.peek_next_next() and self.peek_next_next().isdigit():
+            self.advance()
+            while self.peek_next() and self.peek_next().isdigit():
+                self.advance()
+
+        lexeme= self.file_contents[start_pos:self.pos+1]
+
+        try:
+            if '.' in lexeme:
+                literal = float(lexeme)
+            else:
+                literal = int(lexeme)
+        except ValueError:
+            self.has_error = True
+            print(f"[line {self.line_number}] Error: Invalid number literal: {lexeme}", file=sys.stderr)
+            return None
+        
+        return self.add_token("NUMBER", lexeme, literal)
+
+
 
     def string_scanner(self):
         self.string= ""
         self.start_line = self.line_number
         
-        # Loop until we see the closing quote or the end of the file
         while self.peek_next() and self.peek_next() != '"':
             self.advance()
             char = self.current_char()
@@ -71,6 +95,11 @@ class ParenthesesScanner:
             return None
         return self.file_contents[self.pos + 1]
     
+    def peek_next_next(self):
+        if self.pos + 2 >= len(self.file_contents):
+            return None
+        return self.file_contents[self.pos + 2]
+    
     def add_token(self, token_type, lexeme, literal=None):
         if token_type == "STRING" and lexeme.startswith('"') and lexeme.endswith('"'):
              literal = lexeme[1:-1]
@@ -80,29 +109,21 @@ class ParenthesesScanner:
         return token
 
     def scan_token(self):
-        # --- FIX STARTS HERE ---
-        # The original logic mixed advancing and whitespace skipping in a way
-        # that could cause errors. This new structure is more robust.
-        # First, we advance the position.
         char = self.advance()
 
-        # If advancing took us past the end of the file, we're done.
         if char is None:
             return None
 
-        # Now, skip any whitespace characters.
         while char in ' \t\r\n':
             if char == '\n':
                 self.line_number += 1
             char = self.advance()
-            # If we hit the end of the file while skipping whitespace, stop.
             if char is None:
                 return None
+            
+        if char.isdigit():
+            return self.number_scanner()
         
-        # --- FIX ENDS HERE ---
-        # At this point, 'char' is guaranteed to be the first non-whitespace character.
-
-        # --- Multi-character and special tokens first ---
         if char == '!':
             if self.peek_next() == '=':
                 self.advance()
@@ -113,7 +134,6 @@ class ParenthesesScanner:
             if self.peek_next() == '=':
                 self.advance()
                 return self.add_token('EQUAL_EQUAL', '==')
-            # The single '=' is handled by the dictionary lookup below
         
         if char == '<':
             if self.peek_next() == '=':
@@ -136,23 +156,19 @@ class ParenthesesScanner:
                 return self.add_token('SLASH', '/')
 
         if char == '"':
-            # We don't advance before string_scanner because it expects to be on the opening quote
             return self.string_scanner()
 
-        # --- Use the Operations dictionary for single-character tokens ---
         if char in self.operations:
             token_type = self.operations[char]
             return self.add_token(token_type, char)
 
-        # --- Unrecognized character ---
         self.has_error = True
         print(f"[line {self.line_number}] Error: Unexpected character: {char}", file=sys.stderr)
         return None
 
     def scan_all(self):
-        # Start at position -1 so the first advance() in scan_token moves to position 0
+
         self.pos = -1
-        # Loop until we have processed all characters
         while self.pos < len(self.file_contents) - 1:
             token = self.scan_token()
             if token:
