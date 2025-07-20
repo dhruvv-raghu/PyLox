@@ -1,5 +1,6 @@
 from app.scan_for.operations import Operations
 import sys
+from app.scan_for.tokens import Token
 
 class ParenthesesScanner:
     def __init__(self, filename):
@@ -14,6 +15,9 @@ class ParenthesesScanner:
         self.line_number = 1
         self.has_error = False
         self.operations = Operations
+        self.tokens= []
+
+    
 
     def current_char(self):
         if self.pos >= len(self.file_contents):
@@ -30,6 +34,11 @@ class ParenthesesScanner:
         if self.pos + 1 >= len(self.file_contents):
             return None
         return self.file_contents[self.pos + 1]
+    
+    def add_token(self, token_type, lexeme, literal=None):
+        token = Token(token_type, lexeme, literal, self.line_number)
+        self.tokens.append(token)
+        return token
 
     def scan_token(self):
         while self.current_char() and self.current_char() in ' \t\r':
@@ -41,47 +50,48 @@ class ParenthesesScanner:
         char = self.current_char()
         
         if char == '\n':
+            token = self.add_token("NEWLINE", char)
             self.advance()
-            return
+            return token
         
         match char:
             case '=':
                 if self.peek_next() == '=': 
-                   print("EQUAL_EQUAL == null")
+                   token= self.add_token("EQUAL_EQUAL", "==")
                    self.advance()
                    self.advance()
                 else:
-                   print("EQUAL = null")
+                   token = self.add_token("EQUAL", "=")
                    self.advance()
                 return 
 
             case '!':
                 if self.peek_next() == '=':
-                    print("BANG_EQUAL != null")
+                    token = self.add_token("BANG_EQUAL", "!=")
                     self.advance()
                     self.advance()
                 else:
-                    print("BANG ! null")
+                    token = self.add_token("BANG", "!")
                     self.advance()
                 return
             
             case '<':
                 if self.peek_next() == '=':
-                    print("LESS_EQUAL <= null")
+                    token = self.add_token("LESS_EQUAL", "<=")
                     self.advance()
                     self.advance()
                 else:
-                    print("LESS < null")
+                    token = self.add_token("LESS", "<")
                     self.advance()
                 return
             
             case '>':
                 if self.peek_next() == '=':
-                    print("GREATER_EQUAL >= null")
+                    token = self.add_token("GREATER_EQUAL", ">=")
                     self.advance()
                     self.advance()
                 else:
-                    print("GREATER > null")
+                    token = self.add_token("GREATER", ">")
                     self.advance()
                 return
             
@@ -92,16 +102,32 @@ class ParenthesesScanner:
                         self.advance()
                     return
                 else:
-                    print("SLASH / null")
+                    token = self.add_token("SLASH", "/")
                     self.advance()
                 return
 
         
         if char in self.operations:
             token_type = self.operations[char]
-            print(f"{token_type} {char} null")
+            token = self.add_token(token_type, char)
             self.advance()
+            return token 
         else:
             self.has_error = True
             print(f"[line {self.line_number}] Error: Unexpected character: {char}", file=sys.stderr)
             self.advance()
+            return None 
+        
+    def scan_all(self):
+        while True:
+            try:
+                token = self.scan_token()
+                if token:
+                    print(f"{token.type} {token.lexeme} {token.literal}")
+                else:
+                    self.has_error = True
+                    print(f"[line {self.line_number}] Error: Invalid token", file=sys.stderr)
+            except EOFError:
+                eof_token = self.add_token("EOF", "")
+
+            return self.tokens
