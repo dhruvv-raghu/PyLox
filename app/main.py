@@ -1,6 +1,4 @@
 import sys
-# Make sure the import path for your Parser is correct.
-# If your parser.py is in the root of an 'app' directory, this might need adjustment.
 from app.parser.parser import Parser 
 from app.scan_for.parentheses import ParenthesesScanner
 
@@ -30,10 +28,10 @@ def main():
 
             print(f"{token.type} {token.lexeme} {literal_to_print}")
 
-        # Now, after printing, we check if there was an error and exit if needed.
+    
         if scanner.has_error:
             exit(65)
-        # --- FIX ENDS HERE ---
+
         return
     
     if command == 'parse':
