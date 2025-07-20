@@ -80,15 +80,27 @@ class ParenthesesScanner:
         return token
 
     def scan_token(self):
+        # --- FIX STARTS HERE ---
+        # The original logic mixed advancing and whitespace skipping in a way
+        # that could cause errors. This new structure is more robust.
+        # First, we advance the position.
         char = self.advance()
 
-        while char is not None and char in ' \t\r':
+        # If advancing took us past the end of the file, we're done.
+        if char is None:
+            return None
+
+        # Now, skip any whitespace characters.
+        while char in ' \t\r\n':
             if char == '\n':
                 self.line_number += 1
             char = self.advance()
-
-        if char is None:
-            return None
+            # If we hit the end of the file while skipping whitespace, stop.
+            if char is None:
+                return None
+        
+        # --- FIX ENDS HERE ---
+        # At this point, 'char' is guaranteed to be the first non-whitespace character.
 
         # --- Multi-character and special tokens first ---
         if char == '!':
@@ -124,9 +136,10 @@ class ParenthesesScanner:
                 return self.add_token('SLASH', '/')
 
         if char == '"':
+            # We don't advance before string_scanner because it expects to be on the opening quote
             return self.string_scanner()
 
-        # --- NEW: Use the Operations dictionary for single-character tokens ---
+        # --- Use the Operations dictionary for single-character tokens ---
         if char in self.operations:
             token_type = self.operations[char]
             return self.add_token(token_type, char)
@@ -137,7 +150,9 @@ class ParenthesesScanner:
         return None
 
     def scan_all(self):
+        # Start at position -1 so the first advance() in scan_token moves to position 0
         self.pos = -1
+        # Loop until we have processed all characters
         while self.pos < len(self.file_contents) - 1:
             token = self.scan_token()
             if token:
