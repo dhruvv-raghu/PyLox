@@ -22,7 +22,7 @@ class ParenthesesScanner:
         self.escape_sequences = EscapeSequences
         self.tokens= []
     
-    def identifier_scanner(self):
+    def kw_identifier_scanner(self):
         start_pos= self.pos
         while self.peek_next() and (self.peek_next().isalnum() or self.peek_next() == '_'):
             self.advance()
@@ -131,7 +131,7 @@ class ParenthesesScanner:
                 return None
             
         if char.isalpha() or char == '_':
-            return self.identifier_scanner()
+            return self.kw_identifier_scanneridentifier_scanner()
             
         if char.isdigit():
             return self.number_scanner()
