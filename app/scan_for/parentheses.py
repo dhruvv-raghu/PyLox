@@ -34,10 +34,7 @@ class ParenthesesScanner:
         lexeme= self.file_contents[start_pos:self.pos+1]
 
         try:
-            if '.' in lexeme:
-                literal = float(lexeme)
-            else:
-                literal = int(lexeme)
+            literal = float(lexeme)
         except ValueError:
             self.has_error = True
             print(f"[line {self.line_number}] Error: Invalid number literal: {lexeme}", file=sys.stderr)
