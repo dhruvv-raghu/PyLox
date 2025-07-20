@@ -31,9 +31,6 @@ class ParenthesesScanner:
         
         token_type = self.keywords.get(lexeme, 'IDENTIFIER')
         literal = None
-        if token_type == 'IDENTIFIER':
-            literal = lexeme
-        
         return self.add_token(token_type, lexeme, literal)
             
     def number_scanner(self):
