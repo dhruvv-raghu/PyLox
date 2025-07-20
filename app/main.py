@@ -26,7 +26,7 @@ def main():
         for token in tokens:
             # We don't want to print the final EOF token in this case.
             if token.type == 'EOF':
-                continue
+                print("EOF  null")
             
             literal_to_print = token.literal
             if isinstance(literal_to_print, float):
