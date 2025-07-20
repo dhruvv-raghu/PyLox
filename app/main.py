@@ -20,13 +20,7 @@ def main():
         scanner = ParenthesesScanner(filename)
         tokens = scanner.scan_all()
         
-        # --- FIX STARTS HERE ---
-        # First, we print all the tokens that the scanner was able to find,
-        # even if an error was encountered later.
         for token in tokens:
-            # We don't want to print the final EOF token in this case.
-            if token.type == 'EOF':
-                print("EOF  null")
             
             literal_to_print = token.literal
             if isinstance(literal_to_print, float):
