@@ -2,7 +2,8 @@ from app.scan_for.operations import Operations
 import sys
 from app.scan_for.tokens import Token
 from app.scan_for.escseq import EscapeSequences
-from app.scan_for.characters import CharacterSet
+from app.scan_for.keywords import Keywords
+
 
 class ParenthesesScanner:
     def __init__(self, filename):
@@ -16,11 +17,25 @@ class ParenthesesScanner:
         self.pos = 0
         self.line_number = 1
         self.has_error = False
+        self.keywords = Keywords
         self.operations = Operations
-        self.characters = CharacterSet
         self.escape_sequences = EscapeSequences
         self.tokens= []
     
+    def identifier_scanner(self):
+        start_pos= self.pos
+        while self.peek_next() and (self.peek_next().isalnum() or self.peek_next() == '_'):
+            self.advance()
+
+        lexeme = self.file_contents[start_pos:self.pos+1]
+        
+        token_type = self.keywords.get(lexeme, 'IDENTIFIER')
+        literal = None
+        if token_type == 'IDENTIFIER':
+            literal = lexeme
+        
+        return self.add_token(token_type, lexeme, literal)
+            
     def number_scanner(self):
         start_pos = self.pos
         while self.peek_next() and self.peek_next().isdigit():
@@ -57,7 +72,7 @@ class ParenthesesScanner:
             if char == '\\' and self.peek_next() is not None:
                 self.advance()
                 next_char = self.current_char()
-                escape_map = {'n': '\n', 't': '\t', 'r': '\r', '\\': '\\', '"': '"'}
+                escape_map = EscapeSequences
                 if next_char in escape_map:
                     self.string += escape_map[next_char]
                 else:
@@ -117,6 +132,9 @@ class ParenthesesScanner:
             char = self.advance()
             if char is None:
                 return None
+            
+        if char.isalpha() or char == '_':
+            return self.identifier_scanner()
             
         if char.isdigit():
             return self.number_scanner()
