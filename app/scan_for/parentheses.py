@@ -131,7 +131,7 @@ class ParenthesesScanner:
                 return None
             
         if char.isalpha() or char == '_':
-            return self.kw_identifier_scanneridentifier_scanner()
+            return self.kw_identifier_scanner()
             
         if char.isdigit():
             return self.number_scanner()
