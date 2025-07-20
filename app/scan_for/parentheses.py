@@ -25,33 +25,35 @@ class ParenthesesScanner:
     def string_scanner(self):
         self.string= ""
         self.start_line = self.line_number
-        self.advance()
-
-        while self.current_char() and self.current_char() != '"':
-            char= self.current_char()
+        
+        # Loop until we see the closing quote or the end of the file
+        while self.peek_next() and self.peek_next() != '"':
+            self.advance()
+            char = self.current_char()
             if char == '\n':
                 self.line_number += 1
-                self.string += char
-            elif char == '\\' and self.peek_next() is not None:
+            
+            if char == '\\' and self.peek_next() is not None:
                 self.advance()
-                esc_char = self.peek_next()
-                if esc_char in self.escape_sequences:
-                    self.string += self.escape_sequences[esc_char]
+                next_char = self.current_char()
+                escape_map = {'n': '\n', 't': '\t', 'r': '\r', '\\': '\\', '"': '"'}
+                if next_char in escape_map:
+                    self.string += escape_map[next_char]
                 else:
-                    self.string += esc_char
+                    self.string += next_char
             else:
                 self.string += char
 
-            self.advance()
-
-        if self.current_char() is None:
+        # Check for unterminated string
+        if self.peek_next() is None:
             self.has_error = True
-            print(f"[line {self.start_line}] Error: Unterminated string", file=sys.stderr)
-            return self.add_token("STRING",f'"{self.string}', self.string)
+            print(f"[line {self.start_line}] Error: Unterminated string.", file=sys.stderr)
+            self.pos = len(self.file_contents)
+            return None
+
+        self.advance() # Consume the closing quote
         
-        self.advance()  # Skip the closing quote
         return self.add_token("STRING", f'"{self.string}"', self.string)
-    
 
     def current_char(self):
         if self.pos >= len(self.file_contents):
@@ -60,9 +62,9 @@ class ParenthesesScanner:
 
     def advance(self):
         if self.pos < len(self.file_contents):
-            if self.file_contents[self.pos] == '\n':
-                self.line_number += 1
             self.pos += 1
+        return self.current_char()
+
 
     def peek_next(self):
         if self.pos + 1 >= len(self.file_contents):
@@ -70,101 +72,74 @@ class ParenthesesScanner:
         return self.file_contents[self.pos + 1]
     
     def add_token(self, token_type, lexeme, literal=None):
+        if token_type == "STRING" and lexeme.startswith('"') and lexeme.endswith('"'):
+             literal = lexeme[1:-1]
+        
         token = Token(token_type, lexeme, literal, self.line_number)
         self.tokens.append(token)
         return token
 
     def scan_token(self):
-        while self.current_char() and self.current_char() in ' \t\r':
-            self.advance()
+        char = self.advance()
+
+        while char is not None and char in ' \t\r':
+            if char == '\n':
+                self.line_number += 1
+            char = self.advance()
+
+        if char is None:
+            return None
+
+        # --- Multi-character and special tokens first ---
+        if char == '!':
+            if self.peek_next() == '=':
+                self.advance()
+                return self.add_token('BANG_EQUAL', '!=')
+            return self.add_token('BANG', '!')
         
-        if self.current_char() is None:
-            raise EOFError("End of file reached")
+        if char == '=':
+            if self.peek_next() == '=':
+                self.advance()
+                return self.add_token('EQUAL_EQUAL', '==')
+            # The single '=' is handled by the dictionary lookup below
         
-        char = self.current_char()
-        
-        if char == '\n':
-            token = self.add_token("NEWLINE", char)
-            self.advance()
-            return token
-        
+        if char == '<':
+            if self.peek_next() == '=':
+                self.advance()
+                return self.add_token('LESS_EQUAL', '<=')
+            return self.add_token('LESS', '<')
+
+        if char == '>':
+            if self.peek_next() == '=':
+                self.advance()
+                return self.add_token('GREATER_EQUAL', '>=')
+            return self.add_token('GREATER', '>')
+
+        if char == '/':
+            if self.peek_next() == '/':
+                while self.peek_next() and self.peek_next() != '\n':
+                    self.advance()
+                return None
+            else:
+                return self.add_token('SLASH', '/')
+
         if char == '"':
             return self.string_scanner()
-        
-        match char:
-            case '=':
-                if self.peek_next() == '=': 
-                   token= self.add_token("EQUAL_EQUAL", "==")
-                   self.advance()
-                   self.advance()
-                else:
-                   token = self.add_token("EQUAL", "=")
-                   self.advance()
-                return 
 
-            case '!':
-                if self.peek_next() == '=':
-                    token = self.add_token("BANG_EQUAL", "!=")
-                    self.advance()
-                    self.advance()
-                else:
-                    token = self.add_token("BANG", "!")
-                    self.advance()
-                return
-            
-            case '<':
-                if self.peek_next() == '=':
-                    token = self.add_token("LESS_EQUAL", "<=")
-                    self.advance()
-                    self.advance()
-                else:
-                    token = self.add_token("LESS", "<")
-                    self.advance()
-                return
-            
-            case '>':
-                if self.peek_next() == '=':
-                    token = self.add_token("GREATER_EQUAL", ">=")
-                    self.advance()
-                    self.advance()
-                else:
-                    token = self.add_token("GREATER", ">")
-                    self.advance()
-                return
-            
-            case '/':
-                if self.peek_next() == '/':
-                    # Single-line comment
-                    while self.current_char() and self.current_char() != '\n':
-                        self.advance()
-                    return
-                else:
-                    token = self.add_token("SLASH", "/")
-                    self.advance()
-                return
-
-        
+        # --- NEW: Use the Operations dictionary for single-character tokens ---
         if char in self.operations:
             token_type = self.operations[char]
-            token = self.add_token(token_type, char)
-            self.advance()
-            return token 
-        else:
-            self.has_error = True
-            print(f"[line {self.line_number}] Error: Unexpected character: {char}", file=sys.stderr)
-            self.advance()
-            return None 
-        
-    def scan_all(self):
-        while True:
-            try:
-                token = self.scan_token()
-                if token:
-                    print(f"{token.type} {token.lexeme} {token.literal}")
-                else:
-                    self.has_error = True
-                    print(f"[line {self.line_number}] Error: Invalid token", file=sys.stderr)
-            except EOFError:
-                eof_token = self.add_token("EOF", "")
+            return self.add_token(token_type, char)
 
-            return self.tokens
+        # --- Unrecognized character ---
+        self.has_error = True
+        print(f"[line {self.line_number}] Error: Unexpected character: {char}", file=sys.stderr)
+        return None
+
+    def scan_all(self):
+        self.pos = -1
+        while self.pos < len(self.file_contents) - 1:
+            token = self.scan_token()
+            if token:
+                literal_to_print = token.literal if token.literal is not None else "null"
+                print(f"{token.type} {token.lexeme} {literal_to_print}")
