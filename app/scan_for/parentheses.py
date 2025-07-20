@@ -186,3 +186,6 @@ class ParenthesesScanner:
             if token:
                 literal_to_print = token.literal if token.literal is not None else "null"
                 print(f"{token.type} {token.lexeme} {literal_to_print}")
+        
+        self.add_token("EOF",'', None)
+        return self.tokens 

@@ -1,5 +1,6 @@
 import sys
 from app.scan_for.parentheses import ParenthesesScanner
+from app.parser.parser import Parser
 
 def main():
     if len(sys.argv) < 3:
@@ -14,9 +15,12 @@ def main():
         exit(1)
 
     scanner = ParenthesesScanner(filename)
-    scanner.scan_all()
+    tokens= scanner.scan_all()
  
-    print("EOF  null")
+    parser= Parser(tokens)
+    ast = parser.parse()
+    print(ast)
+    
         
     if scanner.has_error:
         exit(65)
