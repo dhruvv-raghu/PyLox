@@ -6,8 +6,8 @@ class Literal(Expr):
         self.value = value
 
     def __repr__(self):
-        if not self.value:
-            return "nil"
+        if self.value == 'nil':
+            return self.value
         if isinstance(self.value, bool):
             return str(self.value).lower()
         return str(self.value)
