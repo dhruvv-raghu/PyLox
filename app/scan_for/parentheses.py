@@ -144,7 +144,7 @@ class ParenthesesScanner:
                 return
 
         
-        if char in self.operations | self.characters:
+        if char in self.operations:
             token_type = self.operations[char]
             token = self.add_token(token_type, char)
             self.advance()
