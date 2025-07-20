@@ -9,4 +9,6 @@ class Literal(Expr):
         if not self.value:
             return "nil"
         if isinstance(self.value, bool):
-            return self.value.lower()
+            return str(self.value).lower()
+        return str(self.value)
+    
