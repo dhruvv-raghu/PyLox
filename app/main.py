@@ -24,7 +24,7 @@ def main():
             
             literal_to_print = token.literal
             if isinstance(literal_to_print, float):
-                literal_to_print = f"{literal_to_print:.1f}"
+                literal_to_print = f"{literal_to_print}"
             elif literal_to_print is None:
                 literal_to_print = "null"
 
