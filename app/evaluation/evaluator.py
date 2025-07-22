@@ -1,20 +1,20 @@
 from app.parser.ast import Expr, Literal, Grouping, Unary, Binary
-from app.evaluation.visitors import Visitors # Assuming a Visitor base class
+from app.evaluation.visitors import Visitor # Assuming a Visitor base class
 
-class Evaluator(Visitors):
+class Evaluator(Visitor):
     def evaluate(self, expr: Expr):
         """Public entry point to start evaluation."""
         return expr.accept(self)
 
-    def visit_Literal_expr(self, expr: Literal):
+    def visit_literal(self, expr: Literal):
         """A literal evaluates to its own value."""
         return expr.value
 
-    def visit_Grouping_expr(self, expr: Grouping):
+    def visit_grouping(self, expr: Grouping):
         """A grouping evaluates to its inner expression."""
         return self.evaluate(expr.expression)
 
-    def visit_Unary_expr(self, expr: Unary):
+    def visit_unary(self, expr: Unary):
         right = self.evaluate(expr.right)
         op_type = expr.operator.type
 
@@ -27,7 +27,7 @@ class Evaluator(Visitors):
         
         return None # Should be unreachable
 
-    def visit_Binary_expr(self, expr: Binary):
+    def visit_binary(self, expr: Binary):
         left = self.evaluate(expr.left)
         right = self.evaluate(expr.right)
         op_type = expr.operator.type

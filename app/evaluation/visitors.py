@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-class Visitors(ABC):
+class Visitor(ABC):
 
    @abstractmethod
    def visit_binary(self, node):
