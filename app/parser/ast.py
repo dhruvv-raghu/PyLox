@@ -1,7 +1,7 @@
-from app.evaluation.visitors import Visitor
+from app.evaluation.visitors import Visitors
 
 class Expr:
-    def accept(self, visitor: Visitor):
+    def accept(self, visitor: Visitors):
         raise NotImplementedError("Subclasses must implement this method")
     pass
 
