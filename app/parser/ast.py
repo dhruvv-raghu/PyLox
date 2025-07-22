@@ -41,7 +41,6 @@ class Literal(Expr):
         return str(self.value)
 
 class Grouping(Expr):
-    """Represents an expression wrapped in parentheses."""
     def __init__(self, expression):
         self.expression = expression
 
