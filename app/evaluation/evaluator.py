@@ -10,7 +10,6 @@ class Evaluator(Visitor):
         return expr.value
 
     def visit_grouping(self, expr: Grouping):
-        """A grouping evaluates to its inner expression."""
         return self.evaluate(expr.expression)
 
     def visit_unary(self, expr: Unary):
