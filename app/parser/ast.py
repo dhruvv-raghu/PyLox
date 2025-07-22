@@ -16,6 +16,7 @@ class Binary(Expr):
 
 class Unary(Expr):
     """Represents a unary operation like -5 or !true."""
+    # --- FIX: The parameter order was swapped. It should be (operator, right). ---
     def __init__(self, operator, right):
         self.operator = operator
         self.right = right
@@ -45,5 +46,4 @@ class Grouping(Expr):
         self.expression = expression
 
     def __repr__(self):
-        # --- FIX: The string format must be "(group ...)" ---
         return f"(group {self.expression})"
