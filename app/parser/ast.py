@@ -1,5 +1,3 @@
-# This file defines the classes for our Abstract Syntax Tree (AST).
-
 class Expr:
     pass
 
