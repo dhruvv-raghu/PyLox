@@ -2,6 +2,7 @@ import sys
 from app.parser.parser import Parser 
 from app.scan_for.parentheses import ParenthesesScanner
 from app.evaluation.evaluator import Evaluator
+from app.stringify import stringify
 
 def main():
     if len(sys.argv) < 3:
@@ -62,7 +63,7 @@ def main():
         evaluator = Evaluator()
         result = evaluator.evaluate(ast)
         
-        print(str(result).lower() if isinstance(result, bool) else result)
+        print(stringify(result))
 
 if __name__ == "__main__":
     main()
