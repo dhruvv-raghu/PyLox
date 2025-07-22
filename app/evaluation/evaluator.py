@@ -45,7 +45,7 @@ class Evaluator(Visitor):
                 return left + right
             if isinstance(left, str) and isinstance(right, str):
                 return left + right
-            raise Exception(f"[line {expr.operator.line}] Error: Operands must be two numbers or two strings.")
+            raise RuntimeError(f"Operands must be two numbers or two strings.\n [line {expr.operator.line}]")
 
         if op_type == 'GREATER':
             self._check_number_operands(expr.operator, left, right)
