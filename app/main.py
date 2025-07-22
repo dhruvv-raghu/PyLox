@@ -62,7 +62,7 @@ def main():
         evaluator = Evaluator()
         result = evaluator.evaluate(ast)
         
-        print(result.lower() if isinstance(result, bool) else result)
+        print(str(result).lower() if isinstance(result, bool) else result)
 
 if __name__ == "__main__":
     main()
