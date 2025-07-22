@@ -1,5 +1,5 @@
 from app.parser.ast import Expr, Literal, Grouping, Unary, Binary
-from app.evaluation.visitors import Visitor # Assuming a Visitor base class
+from app.evaluation.visitors import Visitor
 
 class Evaluator(Visitor):
     def evaluate(self, expr: Expr):
