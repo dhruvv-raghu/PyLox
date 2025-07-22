@@ -1,6 +1,7 @@
 import sys
 from app.parser.parser import Parser 
 from app.scan_for.parentheses import ParenthesesScanner
+from app.evaluation.evaluator import Evaluator
 
 def main():
     if len(sys.argv) < 3:
@@ -10,7 +11,7 @@ def main():
     command = sys.argv[1]
     filename = sys.argv[2]
 
-    if command not in ['parse', 'tokenize']:
+    if command not in ['parse', 'tokenize', 'evaluate']:
         print(f"Unknown command: {command}", file=sys.stderr)
         exit(1)
 
@@ -46,6 +47,22 @@ def main():
             exit(65)
             
         print(ast)
+
+    if command == 'evaluate':
+        scanner = ParenthesesScanner(filename)
+        tokens = scanner.scan_all()
+        if scanner.has_error:
+            exit(65)
+        
+        parser = Parser(tokens)
+        ast = parser.parse()
+        if ast is None:
+            exit(65)
+
+        evaluator = Evaluator()
+        result = evaluator.evaluate(ast)
+        
+        print(result)
 
 if __name__ == "__main__":
     main()

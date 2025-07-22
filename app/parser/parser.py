@@ -70,9 +70,9 @@ class Parser:
         
         if self.match('LEFT_PAREN'):
             expr = self.expression()
-            self.consume('RIGHT_PAREN', "Expected ')' after expression")
+            self.consume('RIGHT_PAREN', "Expect expression")
             return Grouping(expr)
-        raise self.error(self.peek(), "Expected expression.") 
+        raise self.error(self.peek(), "Expect expression.") 
 
     
     """
@@ -110,4 +110,4 @@ class Parser:
         return self.tokens[self.current - 1]
     
     def error(self, token, message):
-        raise Exception(f"[{token.line}] Error at {token.lexeme}: {message}")
+        raise Exception(f" Error at {token.lexeme}: {message}")

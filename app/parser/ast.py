@@ -1,4 +1,8 @@
+from app.evaluation.visitors import Visitor
+
 class Expr:
+    def accept(self, visitor: Visitor):
+        raise NotImplementedError("Subclasses must implement this method")
     pass
 
 class Binary(Expr):
@@ -10,6 +14,9 @@ class Binary(Expr):
 
     def __repr__(self):
         return f"({self.operator.lexeme} {self.left} {self.right})"
+    
+    def accept(self, visitor: Visitor):
+        return visitor.visit_binary(self)
 
 class Unary(Expr):
     """Represents a unary operation like -5 or !true."""
@@ -21,6 +28,9 @@ class Unary(Expr):
     def __repr__(self):
         return f"({self.operator.lexeme} {self.right})"
 
+    def accept(self, visitor: Visitor):
+        return visitor.visit_unary(self)
+    
 class Literal(Expr):
     """Represents a literal value like a number, string, True, False, or Nil."""
     def __init__(self, value):
@@ -37,9 +47,16 @@ class Literal(Expr):
                 return f"{self.value:.1f}"
         return str(self.value)
 
+
+    def accept(self, visitor: Visitor):
+        return visitor.visit_literal(self)
+    
 class Grouping(Expr):
     def __init__(self, expression):
         self.expression = expression
 
     def __repr__(self):
         return f"(group {self.expression})"
+
+    def accept(self, visitor: Visitor):
+        return visitor.visit_grouping(self)
