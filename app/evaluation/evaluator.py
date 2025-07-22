@@ -6,7 +6,6 @@ class Evaluator(Visitor):
         return expr.accept(self)
 
     def visit_literal(self, expr: Literal):
-        """A literal evaluates to its own value."""
         return expr.value
 
     def visit_grouping(self, expr: Grouping):
