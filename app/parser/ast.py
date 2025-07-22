@@ -16,7 +16,7 @@ class Binary(Expr):
 
 class Unary(Expr):
     """Represents a unary operation like -5 or !true."""
-    # --- FIX: The parameter order was swapped. It should be (operator, right). ---
+
     def __init__(self, operator, right):
         self.operator = operator
         self.right = right
@@ -34,7 +34,7 @@ class Literal(Expr):
             return "nil"
         if isinstance(self.value, bool):
             return str(self.value).lower()
-        # Correctly format floats to show .0 for whole numbers
+
         if isinstance(self.value, float):
             if self.value.is_integer():
                 return f"{self.value:.1f}"
