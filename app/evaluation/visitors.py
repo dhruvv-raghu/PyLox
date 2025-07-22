@@ -4,7 +4,6 @@ class Visitors(ABC):
 
    @abstractmethod
    def visit_binary(self, node):
-       """Visit a node in the AST."""
        pass
    
    @abstractmethod
