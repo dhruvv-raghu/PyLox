@@ -54,7 +54,7 @@ class Parser:
         if self.match("BANG", "MINUS"):
             operator = self.previous()
             right = self.unary()
-            return Unary(right, operator)
+            return Unary(operator, right)
         return self.primary()
     
     def primary(self):
