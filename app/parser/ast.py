@@ -1,7 +1,6 @@
 # This file defines the classes for our Abstract Syntax Tree (AST).
 
 class Expr:
-    """Base class for all expression nodes."""
     pass
 
 class Binary(Expr):
