@@ -9,7 +9,7 @@ class Parser:
 
     def parse(self):
         try:
-            return self.expression()
+            return f'group {self.expression()}'
         except Exception as e:
             print(f"Error parsing expression: {e}", file=sys.stderr)
             return None
