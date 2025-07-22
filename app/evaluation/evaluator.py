@@ -19,7 +19,7 @@ class Evaluator(Visitor):
             self._check_number_operand(expr.operator, right)
             return -float(right)
         if op_type == 'BANG':
-            # FIX: '!' is logical NOT.
+           
             return not self._is_truthy(right)
         
         return None # Should be unreachable
@@ -77,7 +77,7 @@ class Evaluator(Visitor):
 
     def _check_number_operand(self, operator, operand):
         if isinstance(operand, float): return
-        raise Exception(f"[line {operator.line}] Error: Operand must be a number.")
+        raise Exception(f"Operand must be a number. \n [line {operator.line}] ")
 
     def _check_number_operands(self, operator, left, right):
         if isinstance(left, float) and isinstance(right, float): return
