@@ -15,7 +15,7 @@ class Binary(Expr):
     def __repr__(self):
         return f"({self.operator.lexeme} {self.left} {self.right})"
     
-    def accept(self, visitor: Visitor):
+    def accept(self, visitor: Visitors):
         return visitor.visit_binary(self)
 
 class Unary(Expr):
@@ -28,7 +28,7 @@ class Unary(Expr):
     def __repr__(self):
         return f"({self.operator.lexeme} {self.right})"
 
-    def accept(self, visitor: Visitor):
+    def accept(self, visitor: Visitors):
         return visitor.visit_unary(self)
     
 class Literal(Expr):
@@ -48,7 +48,7 @@ class Literal(Expr):
         return str(self.value)
 
 
-    def accept(self, visitor: Visitor):
+    def accept(self, visitor: Visitors):
         return visitor.visit_literal(self)
     
 class Grouping(Expr):
@@ -58,5 +58,5 @@ class Grouping(Expr):
     def __repr__(self):
         return f"(group {self.expression})"
 
-    def accept(self, visitor: Visitor):
+    def accept(self, visitor: Visitors):
         return visitor.visit_grouping(self)
