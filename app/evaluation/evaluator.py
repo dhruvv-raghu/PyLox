@@ -1,7 +1,7 @@
 from app.parser.ast import Expr, Binary, Unary, Literal, Grouping
-from app.evaluation.visitors import Visitor
+from app.evaluation.visitors import Visitors
 
-class Evaluator(Visitor):
+class Evaluator(Visitors):
     def evaluate(self, expr: Expr):
         return expr.accept(self)
     
