@@ -77,7 +77,7 @@ class Evaluator(Visitor):
 
     def _check_number_operand(self, operator, operand):
         if isinstance(operand, float): return
-        raise Exception(f"Operand must be a number. \n [line {operator.line}] ")
+        raise RuntimeError(f"Operand must be a number. \n [line {operator.line}] ")
 
     def _check_number_operands(self, operator, left, right):
         if isinstance(left, float) and isinstance(right, float): return

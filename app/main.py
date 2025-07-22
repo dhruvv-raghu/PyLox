@@ -61,7 +61,10 @@ def main():
             exit(65)
 
         evaluator = Evaluator()
-        result = evaluator.evaluate(ast)
+        try:
+           result = evaluator.evaluate(ast)
+        except RuntimeError:
+            exit(70)
         
         print(stringify(result))
 
