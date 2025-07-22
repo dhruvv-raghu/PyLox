@@ -6,6 +6,8 @@ class Evaluator(Visitors):
         return expr.accept(self)
     
     def visit_literal(self, node: Literal):
+        if node.value is None:
+            return 'nil'
         return node.value
     
     def visit_grouping(self, node: Grouping):
