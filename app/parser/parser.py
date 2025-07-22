@@ -77,7 +77,7 @@ class Parser:
     
     """
     These are helper functions below that help execute the pipeline and 
-    help attribute the tokens to appropriate nodes.
+    help attribute the tokens to appropriate nodes
     """
     def consume(self, token_type, error_msg):
         if self.check(token_type):
