@@ -3,7 +3,6 @@ from app.evaluation.visitors import Visitor
 
 class Evaluator(Visitor):
     def evaluate(self, expr: Expr):
-        """Public entry point to start evaluation."""
         return expr.accept(self)
 
     def visit_literal(self, expr: Literal):
