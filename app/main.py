@@ -56,10 +56,7 @@ def main():
             exit(65)
         
         parser = Parser(tokens)
-        try:
-          ast = parser.parse()
-        except ParseError as e:
-            exit(65)
+        ast = parser.parse()
 
         if ast is None:
             exit(65)
@@ -81,10 +78,10 @@ def main():
 
         parser = Parser(tokens)
         try:
-          ast = parser.parse()
+            ast = parser.parse()
         except ParseError:
-          exit(65)
-                                
+            exit(65)
+            
         if ast is None:
             exit(65)
 
