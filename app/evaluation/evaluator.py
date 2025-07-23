@@ -9,6 +9,9 @@ class Evaluator(Visitor, StmtVisitor):
             self.execute(statement)
        except RuntimeError as e:
             raise RuntimeError(f"Runtime error: {e}")
+       
+    def evaluate(self, expr:Expr):
+        return expr.accept(self)
 
     def execute(self, stmt: Stmt):
         stmt.accept(self)
