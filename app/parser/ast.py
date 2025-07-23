@@ -10,6 +10,17 @@ class Stmt:
         raise NotImplementedError("Subclasses must implement this method")
 
 # --- Statement Node Classes ---
+
+class Var(Stmt):
+    def __init__(self, name, initializer=None):
+        self.name = name
+        self.initializer = initializer
+
+    def accept(self, visitor: StmtVisitor):
+        return visitor.visit_var(self)
+    
+    
+
 class Print(Stmt):
     def __init__(self, expression: Expr):
         self.expression = expression
@@ -30,6 +41,22 @@ class Expression(Stmt):
         return str(self.expression)
 
 # --- Expression Node Classes ---
+
+class Assign(Expr):
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
+
+    def accept(self, visitor: Visitor):
+        return visitor.visit_assign(self)
+    
+class Variable(Expr):
+    def __init__(self, name):
+        self.name = name
+
+    def accept(self, visitor: Visitor):
+        return visitor.visit_variable(self)
+    
 class Binary(Expr):
     def __init__(self, left, operator, right):
         self.left = left

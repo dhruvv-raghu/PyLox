@@ -1,9 +1,7 @@
-from app.parser.ast import Expr, Stmt, Print, Expression, Literal, Grouping, Unary, Binary
+from app.parser.ast import Expr, Stmt, Var, Print, Expression, Assign, Variable, Literal, Grouping, Unary, Binary
 from app.scan_for.tokens import Token 
 import sys
 
-# A simple custom exception class for signaling a parse error.
-# Your main.py script can catch this specific error to exit with code 65.
 class ParseError(Exception):
     pass
 
@@ -11,44 +9,59 @@ class Parser:
     def __init__(self, tokens):
         self.tokens = tokens 
         self.current = 0
-        # The had_error flag is no longer needed as we stop on the first error.
 
     def parse(self):
-        """
-        The main entry point. Parses a list of statements.
-        Will raise a ParseError if it encounters invalid syntax.
-        """
         statements = []
         while not self.is_at_end():
-            statements.append(self.statement())
+            statements.append(self.declaration())
         return statements
 
-    # No declaration() or synchronize() methods are needed for this simpler error handling.
+    def declaration(self):
+        try:
+            if self.match('VAR'):
+                return self.var_declaration()
+            return self.statement()
+        except ParseError:
+            self.synchronize()
+            return None
+
+    def var_declaration(self):
+        name = self.consume('IDENTIFIER', "Expect variable name.")
+        initializer = None
+        if self.match('EQUAL'):
+            initializer = self.expression()
+        self.consume('SEMICOLON', "Expect ';' after variable declaration.")
+        return Var(name, initializer)
         
     def statement(self):
-        """Parses one statement."""
         if self.match('PRINT'):
             return self.print_statement()
         return self.expression_statement()
 
     def print_statement(self):
-        """Parses a print statement: 'print' expression ';'"""
         value = self.expression()
         self.consume('SEMICOLON', "Expect ';' after value.")
         return Print(value)
 
     def expression_statement(self):
-        """Parses an expression statement: expression (';')?"""
         expr = self.expression()
-        # --- FIX: Changed consume to match to make the semicolon optional ---
-        # This allows for REPL-like evaluation of single expressions without a trailing ';'.
-        self.match('SEMICOLON')
+        self.consume('SEMICOLON', "Expect ';' after expression.")
         return Expression(expr)
-
-    # --- Expression parsing methods (unchanged) ---
+        
     def expression(self):
-        return self.equality()
-    
+        return self.assignment()
+
+    def assignment(self):
+        expr = self.equality()
+        if self.match('EQUAL'):
+            equals = self.previous()
+            value = self.assignment()
+            if isinstance(expr, Variable):
+                name = expr.name
+                return Assign(name, value)
+            self.error(equals, "Invalid assignment target.")
+        return expr
+
     def equality(self):
         expr = self.comparison()
         while self.match("EQUAL_EQUAL", "BANG_EQUAL"):
@@ -93,27 +106,29 @@ class Parser:
         if self.match("FALSE"): return Literal(False)
         if self.match("NIL"): return Literal(None)
         if self.match("NUMBER", "STRING"): return Literal(self.previous().literal)
+        if self.match("IDENTIFIER"): return Variable(self.previous())
         if self.match('LEFT_PAREN'):
             expr = self.expression()
             self.consume('RIGHT_PAREN', "Expect ')' after expression")
             return Grouping(expr)
-        
         raise self.error(self.peek(), "Expect expression.") 
 
-    # --- MODIFIED: The error method now raises the custom ParseError ---
     def error(self, token, message):
-        """Reports an error to stderr and returns the ParseError to be raised."""
         if token.type == 'EOF':
             print(f"[line {token.line}] Error at end: {message}", file=sys.stderr)
         else:
             print(f"[line {token.line}] Error at '{token.lexeme}': {message}", file=sys.stderr)
-        # Return the exception to be raised by the caller (consume() or primary()).
         return ParseError()
 
-    # --- Helper methods (unchanged) ---
+    def synchronize(self):
+        self.advance()
+        while not self.is_at_end():
+            if self.previous().type == 'SEMICOLON': return
+            if self.peek().type in ['CLASS', 'FUN', 'VAR', 'FOR', 'IF', 'WHILE', 'PRINT', 'RETURN']: return
+            self.advance()
+
     def consume(self, token_type, error_msg):
-        if self.check(token_type):
-            return self.advance()
+        if self.check(token_type): return self.advance()
         raise self.error(self.peek(), error_msg)
         
     def check(self, token_type):

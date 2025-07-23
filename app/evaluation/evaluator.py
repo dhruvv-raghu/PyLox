@@ -1,8 +1,12 @@
-from app.parser.ast import Expr, Stmt, Print, Expression, Literal, Grouping, Unary, Binary
+from app.parser.ast import Expr, Stmt, Print, Expression, Literal, Grouping, Unary, Binary, Assign, Variable, Var
 from app.evaluation.visitors import Visitor, StmtVisitor
 from app.stringify import stringify
+from app.environment import Environment
 
 class Evaluator(Visitor, StmtVisitor):
+    def __init__(self):
+        self.environment = Environment()
+        
     def evaluate_statements(self, statements: list[Stmt]):
         """
         Evaluates a list of statements.
@@ -31,6 +35,15 @@ class Evaluator(Visitor, StmtVisitor):
         return stmt.accept(self)
 
     # --- FIX: Renamed methods to match the Visitor base class conventions ---
+
+    def visit_var(self, stmt:Var):
+        value = None
+        if stmt.initializer is not None:
+            value = self.evaluate(stmt.initializer)
+        # Define the variable in the environment.
+        self.environment.define(stmt.name.lexeme, value)
+        return None
+    
     def visit_print(self, stmt: Print):
         value = self.evaluate(stmt.expression)
         print(stringify(value))
@@ -39,6 +52,14 @@ class Evaluator(Visitor, StmtVisitor):
     def visit_expression(self, stmt: Expression):
         # Evaluate the expression and return its value.
         return self.evaluate(stmt.expression)
+    
+    def visit_assign(self, expr: Assign):
+        value = self.evaluate(expr.value)
+        self.environment.assign(expr.name, value)
+        return value
+    
+    def visit_variable(self, node):
+        return self.environment.get(node.name)
        
     def visit_literal(self, expr: Literal):
         return expr.value

@@ -16,6 +16,13 @@ class Visitor(ABC):
         """Visit a node in the AST."""
         pass
    
+   def visit_assign(self, node):
+        pass
+   
+   def visit_variable(self, node):
+        """Visit a variable node in the AST."""
+        pass
+   
    @abstractmethod
    def visit_grouping(self, node):
         """Visit a node in the AST."""
@@ -30,5 +37,9 @@ class StmtVisitor(ABC):
      @abstractmethod
      def visit_print(self, stmt):
            """Visit a print statement."""
+           pass
+     
+     def visit_var(self, stmt):
+           """Visit a variable declaration statement."""
            pass
      
