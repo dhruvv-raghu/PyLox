@@ -84,11 +84,6 @@ def main():
         except RuntimeError as e:
             print(f"Runtime error: {e}", file=sys.stderr)
             exit(70)
-        
-        
-
-        
-        print(stringify(result))
 
 if __name__ == "__main__":
     main()
