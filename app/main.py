@@ -85,7 +85,6 @@ def main():
             print(f"Runtime error: {e}", file=sys.stderr)
             exit(70)
         
-        print(result)
         
 
         
