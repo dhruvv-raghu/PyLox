@@ -63,7 +63,7 @@ def main():
 
         evaluator = Evaluator()
         try:
-           result = evaluator.evaluate(ast)
+           result = evaluator.evaluate_statements(ast)
         except RuntimeError:
             exit(70)
 
@@ -81,7 +81,7 @@ def main():
             ast = parser.parse()
         except ParseError:
             exit(65)
-            
+
         if ast is None:
             exit(65)
 
