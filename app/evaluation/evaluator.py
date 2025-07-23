@@ -6,7 +6,7 @@ from app.environment import Environment
 class Evaluator(Visitor, StmtVisitor):
     def __init__(self):
         self.environment = Environment()
-        
+
     def evaluate_statements(self, statements: list[Stmt]):
         """
         Evaluates a list of statements.
@@ -30,8 +30,6 @@ class Evaluator(Visitor, StmtVisitor):
         return expr.accept(self)
 
     def execute(self, stmt: Stmt):
-        """Executes a single statement by accepting a visitor."""
-        # Return the result from the visitor method to pass values up.
         return stmt.accept(self)
 
     # --- FIX: Renamed methods to match the Visitor base class conventions ---

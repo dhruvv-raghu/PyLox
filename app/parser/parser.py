@@ -2,6 +2,8 @@ from app.parser.ast import Expr, Stmt, Var, Print, Expression, Assign, Variable,
 from app.scan_for.tokens import Token 
 import sys
 
+# A simple custom exception class for signaling a parse error.
+# Your main.py script can catch this specific error to exit with code 65.
 class ParseError(Exception):
     pass
 
@@ -9,21 +11,26 @@ class Parser:
     def __init__(self, tokens):
         self.tokens = tokens 
         self.current = 0
+        # The had_error flag and recovery methods have been removed.
 
     def parse(self):
+        """
+        The main entry point. Parses a list of statements.
+        Will raise a ParseError if it encounters invalid syntax.
+        """
         statements = []
         while not self.is_at_end():
-            statements.append(self.declaration())
+            # The statement method now handles all top-level constructs.
+            statements.append(self.statement())
         return statements
-
-    def declaration(self):
-        try:
-            if self.match('VAR'):
-                return self.var_declaration()
-            return self.statement()
-        except ParseError:
-            self.synchronize()
-            return None
+        
+    def statement(self):
+        """Parses one statement or declaration."""
+        if self.match('VAR'):
+            return self.var_declaration()
+        if self.match('PRINT'):
+            return self.print_statement()
+        return self.expression_statement()
 
     def var_declaration(self):
         name = self.consume('IDENTIFIER', "Expect variable name.")
@@ -32,11 +39,6 @@ class Parser:
             initializer = self.expression()
         self.consume('SEMICOLON', "Expect ';' after variable declaration.")
         return Var(name, initializer)
-        
-    def statement(self):
-        if self.match('PRINT'):
-            return self.print_statement()
-        return self.expression_statement()
 
     def print_statement(self):
         value = self.expression()
@@ -59,7 +61,8 @@ class Parser:
             if isinstance(expr, Variable):
                 name = expr.name
                 return Assign(name, value)
-            self.error(equals, "Invalid assignment target.")
+            # This line will raise the ParseError via self.error()
+            raise self.error(equals, "Invalid assignment target.")
         return expr
 
     def equality(self):
@@ -114,18 +117,12 @@ class Parser:
         raise self.error(self.peek(), "Expect expression.") 
 
     def error(self, token, message):
+        """Reports an error to stderr and returns the ParseError to be raised."""
         if token.type == 'EOF':
             print(f"[line {token.line}] Error at end: {message}", file=sys.stderr)
         else:
             print(f"[line {token.line}] Error at '{token.lexeme}': {message}", file=sys.stderr)
         return ParseError()
-
-    def synchronize(self):
-        self.advance()
-        while not self.is_at_end():
-            if self.previous().type == 'SEMICOLON': return
-            if self.peek().type in ['CLASS', 'FUN', 'VAR', 'FOR', 'IF', 'WHILE', 'PRINT', 'RETURN']: return
-            self.advance()
 
     def consume(self, token_type, error_msg):
         if self.check(token_type): return self.advance()
