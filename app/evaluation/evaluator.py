@@ -4,28 +4,42 @@ from app.stringify import stringify
 
 class Evaluator(Visitor, StmtVisitor):
     def evaluate_statements(self, statements: list[Stmt]):
-       try:
-        for statement in statements:
-            self.execute(statement)
-       except RuntimeError as e:
-            raise RuntimeError(f"Runtime error: {e}")
-       
+        """
+        Evaluates a list of statements.
+        Returns the value of the last expression statement, if any.
+        """
+        last_value = None
+        try:
+            for statement in statements:
+                # Execute the statement and capture its potential return value.
+                result = self.execute(statement)
+                # If the statement was an expression, store its value.
+                if isinstance(statement, Expression):
+                    last_value = result
+        except RuntimeError as e:
+            # Catch runtime errors and re-raise them to be handled by main.
+            raise e
+        return last_value
+           
     def evaluate(self, expr:Expr):
+        """Evaluates a single expression by accepting a visitor."""
         return expr.accept(self)
 
     def execute(self, stmt: Stmt):
-        stmt.accept(self)
+        """Executes a single statement by accepting a visitor."""
+        # Return the result from the visitor method to pass values up.
+        return stmt.accept(self)
 
+    # --- FIX: Renamed methods to match the Visitor base class conventions ---
     def visit_print(self, stmt: Print):
-        value = self.evaluate_expression(stmt.expression)
+        value = self.evaluate(stmt.expression)
         print(stringify(value))
+        # A print statement has no value, so it implicitly returns None.
 
     def visit_expression(self, stmt: Expression):
-        self.evaluate_expression(stmt.expression)
-
-    def evaluate_expression(self, expr: Expr):
-        return expr.accept(self)
-        
+        # Evaluate the expression and return its value.
+        return self.evaluate(stmt.expression)
+       
     def visit_literal(self, expr: Literal):
         return expr.value
 
@@ -40,7 +54,6 @@ class Evaluator(Visitor, StmtVisitor):
             self._check_number_operand(expr.operator, right)
             return -float(right)
         if op_type == 'BANG':
-           
             return not self._is_truthy(right)
         
         return None # Should be unreachable
@@ -56,7 +69,7 @@ class Evaluator(Visitor, StmtVisitor):
         if op_type == 'SLASH':
             self._check_number_operands(expr.operator, left, right)
             if float(right) == 0.0:
-                raise Exception(f"[line {expr.operator.line}] Error: Division by zero.")
+                raise RuntimeError(f"Error: Division by zero.\n [line {expr.operator.line}]")
             return float(left) / float(right)
         if op_type == 'STAR':
             self._check_number_operands(expr.operator, left, right)
@@ -66,7 +79,7 @@ class Evaluator(Visitor, StmtVisitor):
                 return left + right
             if isinstance(left, str) and isinstance(right, str):
                 return left + right
-            raise RuntimeError(f"Operands must be two numbers or two strings.\n [line {expr.operator.line}]")
+            raise RuntimeError(f" Operands must be two numbers or two strings.\n [line {expr.operator.line}]")
 
         if op_type == 'GREATER':
             self._check_number_operands(expr.operator, left, right)
@@ -98,9 +111,8 @@ class Evaluator(Visitor, StmtVisitor):
 
     def _check_number_operand(self, operator, operand):
         if isinstance(operand, float): return
-        raise RuntimeError(f"Operand must be a number. \n [line {operator.line}] ")
+        raise RuntimeError(f"[line {operator.line}] Error: Operand must be a number.")
 
     def _check_number_operands(self, operator, left, right):
         if isinstance(left, float) and isinstance(right, float): return
-        raise RuntimeError(f"Operands must be numbers. \n [line {operator.line}]")
-
+        raise RuntimeError(f"[line {operator.line}] Error: Operands must be numbers.")
