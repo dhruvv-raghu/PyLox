@@ -12,7 +12,7 @@ def main():
     command = sys.argv[1]
     filename = sys.argv[2]
 
-    if command not in ['parse', 'tokenize', 'evaluate']:
+    if command not in ['parse', 'tokenize', 'evaluate', 'run']:
         print(f"Unknown command: {command}", file=sys.stderr)
         exit(1)
 
