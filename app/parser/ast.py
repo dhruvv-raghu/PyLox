@@ -1,7 +1,13 @@
 from app.evaluation.visitors import Visitor
+from app.evaluation.visitors import StmtVisitor
 
 class Expr:
     def accept(self, visitor: Visitor):
+        raise NotImplementedError("Subclasses must implement this method")
+    pass
+
+class Stmt:
+    def accept(self, visitor: StmtVisitor):
         raise NotImplementedError("Subclasses must implement this method")
     pass
 
@@ -30,6 +36,21 @@ class Unary(Expr):
 
     def accept(self, visitor: Visitor):
         return visitor.visit_unary(self)
+    
+class Print(Stmt):
+    def __init__(self, expression: Expr):
+        self.expression = expression
+
+    def accept(self, visitor: StmtVisitor):
+        return visitor.visit_print(self)
+    
+class Expression(Stmt):
+    def __init__(self, expression: Expr):
+        self.expression = expression
+
+    def accept(self, visitor: StmtVisitor):
+        return visitor.visit_expression(self)
+        
     
 class Literal(Expr):
     """Represents a literal value like a number, string, True, False, or Nil."""

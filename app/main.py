@@ -62,7 +62,7 @@ def main():
 
         evaluator = Evaluator()
         try:
-           result = evaluator.evaluate(ast)
+           result = evaluator.evaluate_statements(ast)
         except RuntimeError:
             exit(70)
         

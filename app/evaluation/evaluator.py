@@ -1,10 +1,28 @@
-from app.parser.ast import Expr, Literal, Grouping, Unary, Binary
-from app.evaluation.visitors import Visitor
+from app.parser.ast import Expr, Stmt, Print, Expression, Literal, Grouping, Unary, Binary
+from app.evaluation.visitors import Visitor, StmtVisitor
+from app.stringify import stringify
 
-class Evaluator(Visitor):
-    def evaluate(self, expr: Expr):
+class Evaluator(Visitor, StmtVisitor):
+    def evaluate_statements(self, statements: list[Stmt]):
+       try:
+        for statement in statements:
+            self.execute(statement)
+       except RuntimeError as e:
+            raise RuntimeError(f"Runtime error: {e}")
+
+    def execute(self, stmt: Stmt):
+        stmt.accept(self)
+
+    def visit_print(self, stmt: Print):
+        value = self.evaluate_expressiom(stmt.expression)
+        print(stringify(value))
+
+    def visit_expression(self, stmt: Expression):
+        self.evaluate_expression(stmt.expression)
+
+    def evaluate_expression(self, expr: Expr):
         return expr.accept(self)
-
+        
     def visit_literal(self, expr: Literal):
         return expr.value
 
