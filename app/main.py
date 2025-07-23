@@ -43,7 +43,10 @@ def main():
             exit(65)
         
         parser = Parser(tokens)
-        ast = parser.parse()
+        try:
+            ast = parser.parse()
+        except ParseError:
+            exit(65)
         if ast is None: # Or check a parser error flag
             exit(65)
             
