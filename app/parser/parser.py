@@ -38,9 +38,11 @@ class Parser:
         return Print(value)
 
     def expression_statement(self):
-        """Parses an expression statement: expression ';'"""
+        """Parses an expression statement: expression (';')?"""
         expr = self.expression()
-        self.consume('SEMICOLON', "Expect ';' after expression.")
+        # --- FIX: Changed consume to match to make the semicolon optional ---
+        # This allows for REPL-like evaluation of single expressions without a trailing ';'.
+        self.match('SEMICOLON')
         return Expression(expr)
 
     # --- Expression parsing methods (unchanged) ---
