@@ -14,7 +14,7 @@ class Evaluator(Visitor, StmtVisitor):
         stmt.accept(self)
 
     def visit_print(self, stmt: Print):
-        value = self.evaluate_expressiom(stmt.expression)
+        value = self.evaluate_expression(stmt.expression)
         print(stringify(value))
 
     def visit_expression(self, stmt: Expression):
