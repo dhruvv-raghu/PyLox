@@ -1,5 +1,4 @@
 def stringify(value):
-    """Converts a Python value to the Lox string representation."""
     if value is None:
         return "nil"
     if isinstance(value, bool):
