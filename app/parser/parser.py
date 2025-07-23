@@ -1,33 +1,49 @@
-from app.parser.ast import Expr, Print, Stmt, Expression, Literal, Grouping, Unary, Binary
+from app.parser.ast import Expr, Stmt, Print, Expression, Literal, Grouping, Unary, Binary
 from app.scan_for.tokens import Token 
+import sys
+
+# A simple custom exception class for signaling a parse error.
+# Your main.py script can catch this specific error to exit with code 65.
+class ParseError(Exception):
+    pass
 
 class Parser:
     def __init__(self, tokens):
         self.tokens = tokens 
         self.current = 0
+        # The had_error flag is no longer needed as we stop on the first error.
 
     def parse(self):
+        """
+        The main entry point. Parses a list of statements.
+        Will raise a ParseError if it encounters invalid syntax.
+        """
         statements = []
         while not self.is_at_end():
             statements.append(self.statement())
-        
         return statements
-    
+
+    # No declaration() or synchronize() methods are needed for this simpler error handling.
+        
     def statement(self):
-        if self.match("PRINT"):
+        """Parses one statement."""
+        if self.match('PRINT'):
             return self.print_statement()
         return self.expression_statement()
-    
+
     def print_statement(self):
-        expr = self.expression()
-        self.consume("SEMICOLON", "Expect ';' after value.")
-        return Print(expr)
-    
+        """Parses a print statement: 'print' expression ';'"""
+        value = self.expression()
+        self.consume('SEMICOLON', "Expect ';' after value.")
+        return Print(value)
+
     def expression_statement(self):
+        """Parses an expression statement: expression ';'"""
         expr = self.expression()
-        self.consume("SEMICOLON", "Expect ';' after expression.")
+        self.consume('SEMICOLON', "Expect ';' after expression.")
         return Expression(expr)
-        
+
+    # --- Expression parsing methods (unchanged) ---
     def expression(self):
         return self.equality()
     
@@ -45,7 +61,6 @@ class Parser:
             operator = self.previous()
             right = self.term()
             expr = Binary(expr, operator, right)
-
         return expr 
     
     def term(self):
@@ -72,35 +87,35 @@ class Parser:
         return self.primary()
     
     def primary(self):
-        if self.match("TRUE"):
-            return Literal(True)
-        elif self.match("FALSE"):
-            return Literal(False)
-        elif self.match("NIL"):
-            return Literal(None)
-        
-        if self.match("NUMBER", "STRING"):
-            return Literal(self.previous().literal)
-        
+        if self.match("TRUE"): return Literal(True)
+        if self.match("FALSE"): return Literal(False)
+        if self.match("NIL"): return Literal(None)
+        if self.match("NUMBER", "STRING"): return Literal(self.previous().literal)
         if self.match('LEFT_PAREN'):
             expr = self.expression()
-            self.consume('RIGHT_PAREN', "Expect expression")
+            self.consume('RIGHT_PAREN', "Expect ')' after expression")
             return Grouping(expr)
+        
         raise self.error(self.peek(), "Expect expression.") 
 
-    
-    """
-    These are helper functions below that help execute the pipeline and 
-    help attribute the tokens to appropriate nodes
-    """
+    # --- MODIFIED: The error method now raises the custom ParseError ---
+    def error(self, token, message):
+        """Reports an error to stderr and returns the ParseError to be raised."""
+        if token.type == 'EOF':
+            print(f"[line {token.line}] Error at end: {message}", file=sys.stderr)
+        else:
+            print(f"[line {token.line}] Error at '{token.lexeme}': {message}", file=sys.stderr)
+        # Return the exception to be raised by the caller (consume() or primary()).
+        return ParseError()
+
+    # --- Helper methods (unchanged) ---
     def consume(self, token_type, error_msg):
         if self.check(token_type):
             return self.advance()
         raise self.error(self.peek(), error_msg)
         
     def check(self, token_type):
-        if self.is_at_end():
-            return False
+        if self.is_at_end(): return False
         return self.peek().type == token_type
 
     def match(self, *token_types):
@@ -108,10 +123,10 @@ class Parser:
             if self.check(token_type):
                 self.advance()
                 return True
+        return False
             
     def advance(self):
-        if not self.is_at_end():
-            self.current += 1
+        if not self.is_at_end(): self.current += 1
         return self.previous()
     
     def peek(self):
@@ -122,6 +137,3 @@ class Parser:
     
     def previous(self):
         return self.tokens[self.current - 1]
-    
-    def error(self, token, message):
-        raise Exception(f" Error at {token.lexeme}: {message}")

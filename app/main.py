@@ -1,5 +1,5 @@
 import sys
-from app.parser.parser import Parser 
+from app.parser.parser import Parser, ParseError 
 from app.scan_for.parentheses import ParenthesesScanner
 from app.evaluation.evaluator import Evaluator
 from app.stringify import stringify
@@ -58,7 +58,7 @@ def main():
         parser = Parser(tokens)
         try:
           ast = parser.parse()
-        except Exception as e:
+        except ParseError as e:
             exit(65)
 
         if ast is None:
@@ -70,6 +70,8 @@ def main():
         except RuntimeError:
             exit(70)
 
+        print(stringify(result))
+
     if command == 'run':
         scanner = ParenthesesScanner(filename)
         tokens = scanner.scan_all()
@@ -78,7 +80,11 @@ def main():
             exit(65)
 
         parser = Parser(tokens)
-        ast = parser.parse()
+        try:
+          ast = parser.parse()
+        except ParseError:
+          exit(65)
+                                
         if ast is None:
             exit(65)
 
