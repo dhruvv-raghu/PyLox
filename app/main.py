@@ -62,9 +62,32 @@ def main():
 
         evaluator = Evaluator()
         try:
-           result = evaluator.evaluate_statements(ast)
+           result = evaluator.evaluate(ast)
         except RuntimeError:
             exit(70)
+
+    if command == 'run':
+        scanner = ParenthesesScanner(filename)
+        tokens = scanner.scan_all()
+
+        if scanner.has_error:
+            exit(65)
+
+        parser = Parser(tokens)
+        ast = parser.parse()
+        if ast is None:
+            exit(65)
+
+        evaluator = Evaluator()
+        try:
+            result = evaluator.evaluate_statements(ast)
+        except RuntimeError as e:
+            print(f"Runtime error: {e}", file=sys.stderr)
+            exit(70)
+        
+        print(result)
+        
+
         
         print(stringify(result))
 
