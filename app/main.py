@@ -50,7 +50,7 @@ def main():
         if ast is None: # Or check a parser error flag
             exit(65)
             
-        print(ast)
+        print(ast[0])
 
     if command == 'evaluate':
         scanner = ParenthesesScanner(filename)
