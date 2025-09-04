@@ -1,4 +1,4 @@
-from app.parser.ast import Var, Print, Expression, Assign, Variable, Literal, Grouping, Unary, Binary, Block, If, Logical, While, Function, Return
+from app.parser.ast import Var, Print, Expression, Assign, Variable, Literal, Grouping, Unary, Binary, Block, If, Logical, While, Function, Return, Call
 import sys
 
 class ParseError(Exception):
@@ -16,38 +16,12 @@ class Parser:
         return statements
 
     def declaration(self):
-        """Parses a declaration, which can be a var declaration or a statement."""
+        """Parses a declaration, which can be a function, var, or a statement."""
         if self.match('FUN'):
             return self.function("function")
         if self.match('VAR'):
             return self.var_declaration()
         return self.statement()
-        
-    def function(self, kind: str):
-        """Parses a function declaration."""
-        name = self.consume('IDENTIFIER', f"Expect {kind} name.")
-        self.consume('LEFT_PAREN', f"Expect '(' after {kind} name.")
-        parameters = []
-        if not self.check('RIGHT_PAREN'):
-            while True:
-                if len(parameters) >= 255:
-                    self.error(self.peek(), "Can't have more than 255 parameters.")
-                parameters.append(self.consume('IDENTIFIER', "Expect parameter name."))
-                if not self.match('COMMA'):
-                    break
-        self.consume('RIGHT_PAREN', "Expect ')' after parameters.")
-        self.consume('LEFT_BRACE', f"Expect '{{' before {kind} body.")
-        body = self.block()
-        return Function(name, parameters, body)
-
-    def return_statement(self):
-        """Parses a return statement."""
-        keyword = self.previous()
-        value = None
-        if not self.check('SEMICOLON'):
-            value = self.expression()
-        self.consume('SEMICOLON', "Expect ';' after return value.")
-        return Return(keyword, value)
 
     def statement(self):
         """Parses a statement, dispatching to the correct rule based on the token."""
@@ -57,12 +31,12 @@ class Parser:
             return self.if_statement()
         if self.match('WHILE'):
             return self.while_statement()
-        if self.match('LEFT_BRACE'):
-            return Block(self.block())
         if self.match('PRINT'):
             return self.print_statement()
         if self.match('RETURN'):
             return self.return_statement()
+        if self.match('LEFT_BRACE'):
+            return Block(self.block())
         return self.expression_statement()
 
     def for_statement(self):
@@ -109,13 +83,6 @@ class Parser:
         
         return body
 
-    def while_statement(self):
-        self.consume('LEFT_PAREN', "Expect '(' after 'while'.")
-        condition = self.expression()
-        self.consume('RIGHT_PAREN', "Expect ')' after condition.")
-        body = self.statement()
-        return While(condition, body)
-
     def if_statement(self):
         self.consume('LEFT_PAREN', "Expect '(' after 'if'.")
         condition = self.expression()
@@ -126,12 +93,18 @@ class Parser:
             else_branch = self.statement()
         return If(condition, then_branch, else_branch)
 
-    def block(self):
-        statements = []
-        while not self.check('RIGHT_BRACE') and not self.is_at_end():
-            statements.append(self.declaration())
-        self.consume('RIGHT_BRACE', "Expect '}' after block.")
-        return statements
+    def print_statement(self):
+        value = self.expression()
+        self.consume('SEMICOLON', "Expect ';' after value.")
+        return Print(value)
+        
+    def return_statement(self):
+        keyword = self.previous()
+        value = None
+        if not self.check('SEMICOLON'):
+            value = self.expression()
+        self.consume('SEMICOLON', "Expect ';' after return value.")
+        return Return(keyword, value)
 
     def var_declaration(self):
         name = self.consume('IDENTIFIER', "Expect variable name.")
@@ -141,15 +114,40 @@ class Parser:
         self.consume('SEMICOLON', "Expect ';' after variable declaration.")
         return Var(name, initializer)
 
-    def print_statement(self):
-        value = self.expression()
-        self.consume('SEMICOLON', "Expect ';' after value.")
-        return Print(value)
+    def while_statement(self):
+        self.consume('LEFT_PAREN', "Expect '(' after 'while'.")
+        condition = self.expression()
+        self.consume('RIGHT_PAREN', "Expect ')' after condition.")
+        body = self.statement()
+        return While(condition, body)
 
     def expression_statement(self):
         expr = self.expression()
         self.match('SEMICOLON')
         return Expression(expr)
+
+    def function(self, kind: str):
+        name = self.consume('IDENTIFIER', f"Expect {kind} name.")
+        self.consume('LEFT_PAREN', f"Expect '(' after {kind} name.")
+        parameters = []
+        if not self.check('RIGHT_PAREN'):
+            while True:
+                if len(parameters) >= 255:
+                    self.error(self.peek(), "Can't have more than 255 parameters.")
+                parameters.append(self.consume('IDENTIFIER', "Expect parameter name."))
+                if not self.match('COMMA'):
+                    break
+        self.consume('RIGHT_PAREN', "Expect ')' after parameters.")
+        self.consume('LEFT_BRACE', f"Expect '{{' before {kind} body.")
+        body = self.block()
+        return Function(name, parameters, body)
+
+    def block(self):
+        statements = []
+        while not self.check('RIGHT_BRACE') and not self.is_at_end():
+            statements.append(self.declaration())
+        self.consume('RIGHT_BRACE', "Expect '}' after block.")
+        return statements
 
     def expression(self):
         return self.assignment()
@@ -218,7 +216,31 @@ class Parser:
             operator = self.previous()
             right = self.unary()
             return Unary(operator, right)
-        return self.primary()
+        # ** FIX: unary() must call call() to handle function calls **
+        return self.call()
+
+    def call(self):
+        """Parses a function call expression."""
+        expr = self.primary()
+        while True:
+            if self.match('LEFT_PAREN'):
+                expr = self.finish_call(expr)
+            else:
+                break
+        return expr
+
+    def finish_call(self, callee):
+        """Parses the arguments for a function call."""
+        arguments = []
+        if not self.check('RIGHT_PAREN'):
+            while True:
+                if len(arguments) >= 255:
+                    self.error(self.peek(), "Can't have more than 255 arguments.")
+                arguments.append(self.expression())
+                if not self.match('COMMA'):
+                    break
+        paren = self.consume('RIGHT_PAREN', "Expect ')' after arguments.")
+        return Call(callee, paren, arguments)
 
     def primary(self):
         if self.match("TRUE"): return Literal(True)
