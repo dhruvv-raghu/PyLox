@@ -2,15 +2,13 @@ from app.parser.ast import Var, Print, Expression, Assign, Variable, Literal, Gr
 import sys
 
 # A simple custom exception class for signaling a parse error.
-# Your main.py script can catch this specific error to exit with code 65.
 class ParseError(Exception):
     pass
 
 class Parser:
     def __init__(self, tokens):
-        self.tokens = tokens 
+        self.tokens = tokens
         self.current = 0
-        # The had_error flag and recovery methods have been removed.
 
     def parse(self):
         """
@@ -19,28 +17,27 @@ class Parser:
         """
         statements = []
         while not self.is_at_end():
-            # The statement method now handles all top-level constructs.
-            statements.append(self.statement())
+            # The main loop should call declaration(), which is the highest-level rule.
+            statements.append(self.declaration())
         return statements
-        
+
     def declaration(self):
-        try:
-            if self.match('VAR'):
-                return self.var_declaration()
-            return self.statement()
-        except ParseError:
-            raise 
-        
-    def statement(self):
-        """Parses one statement or declaration."""
-        if self.match('LEFT_BRACE'):
-            return Block(self.block())
+        """Parses a declaration, dispatching to the correct rule."""
         if self.match('VAR'):
             return self.var_declaration()
+        return self.statement()
+
+    def statement(self):
+        """Parses one statement. Does not handle var declarations directly anymore."""
+        if self.match('IF'):
+            return self.if_statement()
+        if self.match('LEFT_BRACE'):
+            return Block(self.block())
+        # The VAR check is removed from here.
         if self.match('PRINT'):
             return self.print_statement()
         return self.expression_statement()
-    
+
     def if_statement(self):
         self.consume('LEFT_PAREN', "Expect '(' after 'if'.")
         condition = self.expression()
@@ -50,15 +47,14 @@ class Parser:
         if self.match('ELSE'):
             else_branch = self.statement()
         return If(condition, then_branch, else_branch)
-        
+
     def block(self):
         statements = []
         while not self.check('RIGHT_BRACE') and not self.is_at_end():
             statements.append(self.declaration())
-
         self.consume('RIGHT_BRACE', "Expect '}' after block.")
         return statements
-        
+
     def var_declaration(self):
         name = self.consume('IDENTIFIER', "Expect variable name.")
         initializer = None
@@ -73,11 +69,11 @@ class Parser:
         return Print(value)
 
     def expression_statement(self):
-        """Parses an expression statement. The semicolon is now optional."""
+        """Parses an expression statement. The semicolon is optional."""
         expr = self.expression()
         self.match('SEMICOLON')
         return Expression(expr)
-        
+
     def expression(self):
         return self.assignment()
 
@@ -89,7 +85,6 @@ class Parser:
             if isinstance(expr, Variable):
                 name = expr.name
                 return Assign(name, value)
-            # This line will raise the ParseError via self.error()
             raise self.error(equals, "Invalid assignment target.")
         return expr
 
@@ -99,24 +94,24 @@ class Parser:
             operator = self.previous()
             right = self.comparison()
             expr = Binary(expr, operator, right)
-        return expr 
-    
+        return expr
+
     def comparison(self):
         expr = self.term()
         while self.match("GREATER", "GREATER_EQUAL", "LESS", "LESS_EQUAL"):
             operator = self.previous()
             right = self.term()
             expr = Binary(expr, operator, right)
-        return expr 
-    
+        return expr
+
     def term(self):
-        expr= self.factors()
+        expr = self.factors()
         while self.match("MINUS", "PLUS"):
             operator = self.previous()
             right = self.factors()
             expr = Binary(expr, operator, right)
         return expr
-    
+
     def factors(self):
         expr = self.unary()
         while self.match("SLASH", "STAR"):
@@ -124,14 +119,14 @@ class Parser:
             right = self.unary()
             expr = Binary(expr, operator, right)
         return expr
-    
+
     def unary(self):
         if self.match("BANG", "MINUS"):
             operator = self.previous()
             right = self.unary()
             return Unary(operator, right)
         return self.primary()
-    
+
     def primary(self):
         if self.match("TRUE"): return Literal(True)
         if self.match("FALSE"): return Literal(False)
@@ -142,7 +137,7 @@ class Parser:
             expr = self.expression()
             self.consume('RIGHT_PAREN', "Expect ')' after expression")
             return Grouping(expr)
-        raise self.error(self.peek(), "Expect expression.") 
+        raise self.error(self.peek(), "Expect expression.")
 
     def error(self, token, message):
         """Reports an error to stderr and returns the ParseError to be raised."""
@@ -155,7 +150,7 @@ class Parser:
     def consume(self, token_type, error_msg):
         if self.check(token_type): return self.advance()
         raise self.error(self.peek(), error_msg)
-        
+
     def check(self, token_type):
         if self.is_at_end(): return False
         return self.peek().type == token_type
@@ -166,16 +161,17 @@ class Parser:
                 self.advance()
                 return True
         return False
-            
+
     def advance(self):
         if not self.is_at_end(): self.current += 1
         return self.previous()
-    
+
     def peek(self):
         return self.tokens[self.current]
-    
+
     def is_at_end(self):
         return self.peek().type == "EOF"
-    
+
     def previous(self):
         return self.tokens[self.current - 1]
+
