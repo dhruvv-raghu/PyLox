@@ -3,40 +3,44 @@ import time
 from app.parser.ast import (
     Expr, Stmt, Print, Expression, Literal, Grouping, Unary, Binary, Var,
     Variable, Assign, Block, If, Logical, While, Call, Function, Return,
-    Class, Get, Set, This  # <-- Added new AST node imports
+    Class, Get, Set, This
 )
 from app.evaluation.visitors import Visitor, StmtVisitor
 from app.environment import Environment
 from app.stringify import stringify
 from app.lox_callable import LoxCallable, ReturnValue
 from app.lox_function import LoxFunction
-# --- NEW IMPORTS for runtime class representation ---
 from app.lox_class import LoxClass
 from app.lox_instance import LoxInstance
+from typing import Dict
 
+from app.scan_for.tokens import Token
 
 class NativeClock(LoxCallable):
-    """A native Lox function that returns the current time."""
-    def arity(self) -> int:
-        return 0
-
-    def call(self, interpreter, arguments: list) -> float:
-        return time.time()
-
-    def __repr__(self):
-        return "<native fn>"
+    def arity(self) -> int: return 0
+    def call(self, interpreter, arguments: list) -> float: return time.time()
+    def __repr__(self): return "<native fn>"
 
 class Evaluator(Visitor, StmtVisitor):
     def __init__(self):
         self.globals = Environment()
+        # --- FIX: Add a dictionary to store resolved variable depths ---
+        self.locals: Dict[Expr, int] = {}
         self.environment = self.globals
-        # Define native functions in the global scope.
         self.globals.define("clock", NativeClock())
+
+    # --- FIX: Add the missing 'resolve' method ---
+    def resolve(self, expr: Expr, depth: int):
+        """
+        Stores the resolved scope distance for a variable expression.
+        This is called by the Resolver.
+        """
+        self.locals[expr] = depth
 
     def evaluate_statements(self, statements: list[Stmt]):
         try:
             for statement in statements:
-                self.execute(statement)
+                if statement: self.execute(statement)
         except RuntimeError as e:
             print(e, file=sys.stderr)
             exit(70)
@@ -55,76 +59,82 @@ class Evaluator(Visitor, StmtVisitor):
 
     def evaluate(self, expr: Expr):
         return expr.accept(self)
+    
+    # --- FIX: New helper to look up variables using resolved data ---
+    def _look_up_variable(self, name: Token, expr: Expr):
+        distance = self.locals.get(expr)
+        if distance is not None:
+            return self.environment.get_at(distance, name.lexeme)
+        else:
+            # Fallback for global variables (which are not "resolved")
+            return self.globals.get(name)
 
-    # --- NEW: visit_class method ---
+    def visit_variable(self, node: Variable):
+        # Use the new lookup helper
+        return self._look_up_variable(node.name, node)
+
+    def visit_assign(self, node: Assign):
+        value = self.evaluate(node.value)
+        distance = self.locals.get(node)
+        if distance is not None:
+            self.environment.assign_at(distance, node.name, value)
+        else:
+            # Fallback for global variables
+            self.globals.assign(node.name, value)
+        return value
+
     def visit_class(self, stmt: Class):
-        """Handles a class declaration statement."""
         self.environment.define(stmt.name.lexeme, None)
         methods = {}
         for method in stmt.methods:
-            # Check if the method is the class initializer
             is_initializer = method.name.lexeme == "init"
             function = LoxFunction(method, self.environment, is_initializer)
             methods[method.name.lexeme] = function
         
         klass = LoxClass(stmt.name.lexeme, methods)
         self.environment.assign(stmt.name, klass)
-        return None
 
-    # --- NEW: visit_get method ---
     def visit_get(self, node: Get):
-        """Handles property access on an instance."""
         obj = self.evaluate(node.obj)
         if isinstance(obj, LoxInstance):
             return obj.get(node.name)
-        raise RuntimeError(f"[line {node.name.line}] Only instances have properties.")
+        raise RuntimeError(f"[{node.name.line}] Only instances have properties.")
 
-    # --- NEW: visit_set method ---
     def visit_set(self, node: Set):
-        """Handles property assignment on an instance."""
         obj = self.evaluate(node.obj)
         if not isinstance(obj, LoxInstance):
-            raise RuntimeError(f"[line {node.name.line}] Only instances have fields.")
+            raise RuntimeError(f"[{node.name.line}] Only instances have fields.")
         
         value = self.evaluate(node.value)
         obj.set(node.name, value)
         return value
 
-    # --- NEW: visit_this method ---
     def visit_this(self, node: This):
-        """Handles the 'this' keyword."""
-        # The resolver should have already done the hard work.
-        # We just look up the variable in the environment.
-        return self.environment.get(node.keyword)
+        return self._look_up_variable(node.keyword, node)
 
     def visit_while(self, stmt: While):
         while self._is_truthy(self.evaluate(stmt.condition)):
             self.execute(stmt.body)
 
     def visit_call(self, node: Call):
-        """Evaluates a function or class instantiation call."""
         callee = self.evaluate(node.callee)
-
         arguments = []
         for argument in node.arguments:
             arguments.append(self.evaluate(argument))
 
         if not isinstance(callee, LoxCallable):
-            raise RuntimeError(f"[line {node.paren.line}] Can only call functions and classes.")
+            raise RuntimeError(f"[{node.paren.line}] Can only call functions and classes.")
 
         if len(arguments) != callee.arity():
-            raise RuntimeError(f"[line {node.paren.line}] Expected {callee.arity()} arguments but got {len(arguments)}.")
+            raise RuntimeError(f"[{node.paren.line}] Expected {callee.arity()} arguments but got {len(arguments)}.")
 
         return callee.call(self, arguments)
 
     def visit_function(self, stmt: Function):
-        """Handles a function declaration statement."""
-        # For a standard 'fun' declaration, it is NOT an initializer.
         function = LoxFunction(stmt, self.environment, False)
         self.environment.define(stmt.name.lexeme, function)
 
     def visit_return(self, stmt: Return):
-        """Handles a return statement by raising a special exception."""
         value = None
         if stmt.value is not None:
             value = self.evaluate(stmt.value)
@@ -143,14 +153,6 @@ class Evaluator(Visitor, StmtVisitor):
         if stmt.initializer is not None:
             value = self.evaluate(stmt.initializer)
         self.environment.define(stmt.name.lexeme, value)
-
-    def visit_variable(self, node: Variable):
-        return self.environment.get(node.name)
-
-    def visit_assign(self, node: Assign):
-        value = self.evaluate(node.value)
-        self.environment.assign(node.name, value)
-        return value
 
     def visit_block(self, stmt: Block):
         self.execute_block(stmt.statements, Environment(self.environment))
@@ -194,7 +196,7 @@ class Evaluator(Visitor, StmtVisitor):
         if op_type == 'SLASH':
             self._check_number_operands(node.operator, left, right)
             if float(right) == 0.0:
-                raise RuntimeError(f"[line {node.operator.line}] Error: Division by zero.")
+                raise RuntimeError(f"[{node.operator.line}] Error: Division by zero.")
             return float(left) / float(right)
         if op_type == 'STAR':
             self._check_number_operands(node.operator, left, right)
@@ -204,7 +206,7 @@ class Evaluator(Visitor, StmtVisitor):
                 return left + right
             if isinstance(left, str) and isinstance(right, str):
                 return left + right
-            raise RuntimeError(f"[line {node.operator.line}] Operands must be two numbers or two strings.")
+            raise RuntimeError(f"[{node.operator.line}] Operands must be two numbers or two strings.")
         if op_type == 'GREATER':
             self._check_number_operands(node.operator, left, right)
             return left > right
@@ -233,9 +235,9 @@ class Evaluator(Visitor, StmtVisitor):
 
     def _check_number_operand(self, operator, operand):
         if isinstance(operand, float): return
-        raise RuntimeError(f"[line {operator.line}] Operand must be a number.")
+        raise RuntimeError(f"[{operator.line}] Operand must be a number.")
 
     def _check_number_operands(self, operator, left, right):
         if isinstance(left, float) and isinstance(right, float): return
-        raise RuntimeError(f"[line {operator.line}] Operands must be numbers.")
+        raise RuntimeError(f"[{operator.line}] Operands must be numbers.")
 
