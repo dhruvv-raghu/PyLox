@@ -1,5 +1,10 @@
-from app.parser.ast import Var, Print, Expression, Assign, Variable, Literal, Grouping, Unary, Binary, Block, If, Logical, While, Function, Return, Call
 import sys
+from app.parser.ast import (
+    Expr, Stmt, Print, Expression, Literal, Grouping, Unary, Binary, Assign,
+    Variable, Var, Block, If, Logical, While, Function, Return, Call, Class,
+    Get, Set, This
+)
+from app.scan_for.tokens import Token
 
 class ParseError(Exception):
     pass
@@ -16,115 +21,26 @@ class Parser:
         return statements
 
     def declaration(self):
-        """Parses a declaration, which can be a function, var, or a statement."""
-        if self.match('FUN'):
-            return self.function("function")
-        if self.match('VAR'):
-            return self.var_declaration()
-        return self.statement()
+        try:
+            if self.match('CLASS'):
+                return self.class_declaration()
+            if self.match('FUN'):
+                return self.function("function")
+            if self.match('VAR'):
+                return self.var_declaration()
+            return self.statement()
+        except ParseError:
+            self.synchronize()
+            return None # Return None on error
 
-    def statement(self):
-        """Parses a statement, dispatching to the correct rule based on the token."""
-        if self.match('FOR'):
-            return self.for_statement()
-        if self.match('IF'):
-            return self.if_statement()
-        if self.match('WHILE'):
-            return self.while_statement()
-        if self.match('PRINT'):
-            return self.print_statement()
-        if self.match('RETURN'):
-            return self.return_statement()
-        if self.match('LEFT_BRACE'):
-            return Block(self.block())
-        return self.expression_statement()
-
-    def for_statement(self):
-        self.consume('LEFT_PAREN', "Expect '(' after 'for'.")
-
-        # 1. Initializer
-        initializer = None
-        if self.match('SEMICOLON'):
-            pass # No initializer
-        elif self.match('VAR'):
-            initializer = self.var_declaration()
-        else:
-            initializer = self.expression_statement()
-        
-        # 2. Condition
-        condition = None
-        if not self.check('SEMICOLON'):
-            condition = self.expression()
-        self.consume('SEMICOLON', "Expect ';' after loop condition.")
-
-        # 3. Increment
-        increment = None
-        if not self.check('RIGHT_PAREN'):
-            increment = self.expression()
-        self.consume('RIGHT_PAREN', "Expect ')' after for clauses.")
-        
-        body = self.statement()
-
-        # --- DESUGARING: Convert the for loop into a while loop ---
-        if increment is not None:
-            # Add the increment to the end of the original body
-            body = Block([body, Expression(increment)])
-        
-        if condition is None:
-            # If no condition, it's an infinite loop
-            condition = Literal(True)
-        
-        # Create the main while loop
-        body = While(condition, body)
-
-        if initializer is not None:
-            # Wrap the whole thing in a block with the initializer
-            body = Block([initializer, body])
-        
-        return body
-
-    def if_statement(self):
-        self.consume('LEFT_PAREN', "Expect '(' after 'if'.")
-        condition = self.expression()
-        self.consume('RIGHT_PAREN', "Expect ')' after if condition.")
-        then_branch = self.statement()
-        else_branch = None
-        if self.match('ELSE'):
-            else_branch = self.statement()
-        return If(condition, then_branch, else_branch)
-
-    def print_statement(self):
-        value = self.expression()
-        self.consume('SEMICOLON', "Expect ';' after value.")
-        return Print(value)
-        
-    def return_statement(self):
-        keyword = self.previous()
-        value = None
-        if not self.check('SEMICOLON'):
-            value = self.expression()
-        self.consume('SEMICOLON', "Expect ';' after return value.")
-        return Return(keyword, value)
-
-    def var_declaration(self):
-        name = self.consume('IDENTIFIER', "Expect variable name.")
-        initializer = None
-        if self.match('EQUAL'):
-            initializer = self.expression()
-        self.consume('SEMICOLON', "Expect ';' after variable declaration.")
-        return Var(name, initializer)
-
-    def while_statement(self):
-        self.consume('LEFT_PAREN', "Expect '(' after 'while'.")
-        condition = self.expression()
-        self.consume('RIGHT_PAREN', "Expect ')' after condition.")
-        body = self.statement()
-        return While(condition, body)
-
-    def expression_statement(self):
-        expr = self.expression()
-        self.match('SEMICOLON')
-        return Expression(expr)
+    def class_declaration(self):
+        name = self.consume('IDENTIFIER', "Expect class name.")
+        self.consume('LEFT_BRACE', "Expect '{' before class body.")
+        methods = []
+        while not self.check('RIGHT_BRACE') and not self.is_at_end():
+            methods.append(self.function("method"))
+        self.consume('RIGHT_BRACE', "Expect '}' after class body.")
+        return Class(name, methods)
 
     def function(self, kind: str):
         name = self.consume('IDENTIFIER', f"Expect {kind} name.")
@@ -142,12 +58,92 @@ class Parser:
         body = self.block()
         return Function(name, parameters, body)
 
+    def statement(self):
+        if self.match('FOR'): return self.for_statement()
+        if self.match('IF'): return self.if_statement()
+        if self.match('WHILE'): return self.while_statement()
+        if self.match('LEFT_BRACE'): return Block(self.block())
+        if self.match('PRINT'): return self.print_statement()
+        if self.match('RETURN'): return self.return_statement()
+        return self.expression_statement()
+
+    def for_statement(self):
+        self.consume('LEFT_PAREN', "Expect '(' after 'for'.")
+        initializer = None
+        if self.match('SEMICOLON'): pass
+        elif self.match('VAR'): initializer = self.var_declaration()
+        else: initializer = self.expression_statement()
+        
+        condition = None
+        if not self.check('SEMICOLON'): condition = self.expression()
+        self.consume('SEMICOLON', "Expect ';' after loop condition.")
+        
+        increment = None
+        if not self.check('RIGHT_PAREN'): increment = self.expression()
+        self.consume('RIGHT_PAREN', "Expect ')' after for clauses.")
+        
+        body = self.statement()
+        
+        if increment is not None:
+            body = Block([body, Expression(increment)])
+        
+        if condition is None: condition = Literal(True)
+        body = While(condition, body)
+        
+        if initializer is not None:
+            body = Block([initializer, body])
+        
+        return body
+
+    def if_statement(self):
+        self.consume('LEFT_PAREN', "Expect '(' after 'if'.")
+        condition = self.expression()
+        self.consume('RIGHT_PAREN', "Expect ')' after if condition.")
+        then_branch = self.statement()
+        else_branch = None
+        if self.match('ELSE'):
+            else_branch = self.statement()
+        return If(condition, then_branch, else_branch)
+
+    def while_statement(self):
+        self.consume('LEFT_PAREN', "Expect '(' after 'while'.")
+        condition = self.expression()
+        self.consume('RIGHT_PAREN', "Expect ')' after condition.")
+        body = self.statement()
+        return While(condition, body)
+
     def block(self):
         statements = []
         while not self.check('RIGHT_BRACE') and not self.is_at_end():
             statements.append(self.declaration())
         self.consume('RIGHT_BRACE', "Expect '}' after block.")
         return statements
+
+    def var_declaration(self):
+        name = self.consume('IDENTIFIER', "Expect variable name.")
+        initializer = None
+        if self.match('EQUAL'):
+            initializer = self.expression()
+        self.consume('SEMICOLON', "Expect ';' after variable declaration.")
+        return Var(name, initializer)
+
+    def print_statement(self):
+        value = self.expression()
+        self.consume('SEMICOLON', "Expect ';' after value.")
+        return Print(value)
+
+    def return_statement(self):
+        keyword = self.previous()
+        value = None
+        if not self.check('SEMICOLON'):
+            value = self.expression()
+        self.consume('SEMICOLON', "Expect ';' after return value.")
+        return Return(keyword, value)
+
+    def expression_statement(self):
+        expr = self.expression()
+        self.match('SEMICOLON')
+        return Expression(expr)
 
     def expression(self):
         return self.assignment()
@@ -158,8 +154,9 @@ class Parser:
             equals = self.previous()
             value = self.assignment()
             if isinstance(expr, Variable):
-                name = expr.name
-                return Assign(name, value)
+                return Assign(expr.name, value)
+            elif isinstance(expr, Get):
+                return Set(expr.obj, expr.name, value)
             raise self.error(equals, "Invalid assignment target.")
         return expr
 
@@ -196,14 +193,14 @@ class Parser:
         return expr
 
     def term(self):
-        expr = self.factors()
+        expr = self.factor()
         while self.match("MINUS", "PLUS"):
             operator = self.previous()
-            right = self.factors()
+            right = self.factor()
             expr = Binary(expr, operator, right)
         return expr
 
-    def factors(self):
+    def factor(self):
         expr = self.unary()
         while self.match("SLASH", "STAR"):
             operator = self.previous()
@@ -216,21 +213,21 @@ class Parser:
             operator = self.previous()
             right = self.unary()
             return Unary(operator, right)
-        # ** FIX: unary() must call call() to handle function calls **
         return self.call()
 
     def call(self):
-        """Parses a function call expression."""
         expr = self.primary()
         while True:
             if self.match('LEFT_PAREN'):
                 expr = self.finish_call(expr)
+            elif self.match('DOT'):
+                name = self.consume('IDENTIFIER', "Expect property name after '.'.")
+                expr = Get(expr, name)
             else:
                 break
         return expr
 
-    def finish_call(self, callee):
-        """Parses the arguments for a function call."""
+    def finish_call(self, callee: Expr):
         arguments = []
         if not self.check('RIGHT_PAREN'):
             while True:
@@ -247,6 +244,7 @@ class Parser:
         if self.match("FALSE"): return Literal(False)
         if self.match("NIL"): return Literal(None)
         if self.match("NUMBER", "STRING"): return Literal(self.previous().literal)
+        if self.match("THIS"): return This(self.previous())
         if self.match("IDENTIFIER"): return Variable(self.previous())
         if self.match('LEFT_PAREN'):
             expr = self.expression()
@@ -288,4 +286,15 @@ class Parser:
 
     def previous(self):
         return self.tokens[self.current - 1]
+    
+    def synchronize(self):
+        self.advance()
+        while not self.is_at_end():
+            if self.previous().type == 'SEMICOLON': return
+
+            token_type = self.peek().type
+            if token_type in ['CLASS', 'FUN', 'VAR', 'FOR', 'IF', 'WHILE', 'PRINT', 'RETURN']:
+                return
+
+            self.advance()
 

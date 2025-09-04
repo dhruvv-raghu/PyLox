@@ -164,3 +164,31 @@ class Grouping(Expr):
 
     def accept(self, visitor: Visitor):
         return visitor.visit_grouping(self)
+
+class Get(Expr):
+    def __init__(self, obj: Expr, name: Token):
+        self.obj = obj
+        self.name = name
+    def accept(self, visitor: Visitor):
+        return visitor.visit_get(self)
+
+class Set(Expr):
+    def __init__(self, obj: Expr, name: Token, value: Expr):
+        self.obj = obj
+        self.name = name
+        self.value = value
+    def accept(self, visitor: Visitor):
+        return visitor.visit_set(self)
+
+class This(Expr):
+    def __init__(self, keyword: Token):
+        self.keyword = keyword
+    def accept(self, visitor: Visitor):
+        return visitor.visit_this(self)
+        
+class Class(Stmt):
+    def __init__(self, name: Token, methods: List[Function]):
+        self.name = name
+        self.methods = methods
+    def accept(self, visitor: StmtVisitor):
+        return visitor.visit_class(self)
