@@ -2,13 +2,18 @@ import sys
 import time
 from app.parser.ast import (
     Expr, Stmt, Print, Expression, Literal, Grouping, Unary, Binary, Var,
-    Variable, Assign, Block, If, Logical, While, Call, Function, Return
+    Variable, Assign, Block, If, Logical, While, Call, Function, Return,
+    Class, Get, Set, This  # <-- Added new AST node imports
 )
 from app.evaluation.visitors import Visitor, StmtVisitor
 from app.environment import Environment
 from app.stringify import stringify
 from app.lox_callable import LoxCallable, ReturnValue
 from app.lox_function import LoxFunction
+# --- NEW IMPORTS for runtime class representation ---
+from app.lox_class import LoxClass
+from app.lox_instance import LoxInstance
+
 
 class NativeClock(LoxCallable):
     """A native Lox function that returns the current time."""
@@ -51,12 +56,53 @@ class Evaluator(Visitor, StmtVisitor):
     def evaluate(self, expr: Expr):
         return expr.accept(self)
 
+    # --- NEW: visit_class method ---
+    def visit_class(self, stmt: Class):
+        """Handles a class declaration statement."""
+        self.environment.define(stmt.name.lexeme, None)
+        methods = {}
+        for method in stmt.methods:
+            # Check if the method is the class initializer
+            is_initializer = method.name.lexeme == "init"
+            function = LoxFunction(method, self.environment, is_initializer)
+            methods[method.name.lexeme] = function
+        
+        klass = LoxClass(stmt.name.lexeme, methods)
+        self.environment.assign(stmt.name, klass)
+        return None
+
+    # --- NEW: visit_get method ---
+    def visit_get(self, node: Get):
+        """Handles property access on an instance."""
+        obj = self.evaluate(node.obj)
+        if isinstance(obj, LoxInstance):
+            return obj.get(node.name)
+        raise RuntimeError(f"[line {node.name.line}] Only instances have properties.")
+
+    # --- NEW: visit_set method ---
+    def visit_set(self, node: Set):
+        """Handles property assignment on an instance."""
+        obj = self.evaluate(node.obj)
+        if not isinstance(obj, LoxInstance):
+            raise RuntimeError(f"[line {node.name.line}] Only instances have fields.")
+        
+        value = self.evaluate(node.value)
+        obj.set(node.name, value)
+        return value
+
+    # --- NEW: visit_this method ---
+    def visit_this(self, node: This):
+        """Handles the 'this' keyword."""
+        # The resolver should have already done the hard work.
+        # We just look up the variable in the environment.
+        return self.environment.get(node.keyword)
+
     def visit_while(self, stmt: While):
         while self._is_truthy(self.evaluate(stmt.condition)):
             self.execute(stmt.body)
 
     def visit_call(self, node: Call):
-        """Evaluates a function call expression."""
+        """Evaluates a function or class instantiation call."""
         callee = self.evaluate(node.callee)
 
         arguments = []
@@ -73,6 +119,7 @@ class Evaluator(Visitor, StmtVisitor):
 
     def visit_function(self, stmt: Function):
         """Handles a function declaration statement."""
+        # For a standard 'fun' declaration, it is NOT an initializer.
         function = LoxFunction(stmt, self.environment, False)
         self.environment.define(stmt.name.lexeme, function)
 
