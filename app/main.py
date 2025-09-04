@@ -4,7 +4,7 @@ from app.parser.ast import Expression
 from app.scan_for.parentheses import ParenthesesScanner
 from app.evaluation.evaluator import Evaluator
 from app.stringify import stringify
-from app.resolver.resolver import Resolver 
+from app.resolver import Resolver 
 
 def main():
     if len(sys.argv) < 3:
@@ -51,7 +51,6 @@ def main():
         return
 
     if command == 'evaluate':
-        # 'evaluate' will run without the resolver for simpler testing.
         scanner = ParenthesesScanner(filename)
         tokens = scanner.scan_all()
         if scanner.has_error:
@@ -87,6 +86,7 @@ def main():
         try:
             statements = parser.parse()
         except ParseError:
+            # --- FIX: This block catches the syntax error and exits correctly ---
             exit(65)
 
         # Create the interpreter instance that will run the code.
@@ -95,10 +95,6 @@ def main():
         # Step 3: Resolution
         resolver = Resolver(evaluator)
         resolver.resolve_statements(statements)
-        
-        # --- FIX: Check for resolution errors before evaluating ---
-        if resolver.had_error:
-            exit(65)
         
         # Step 4: Evaluation (Interpretation)
         try:
