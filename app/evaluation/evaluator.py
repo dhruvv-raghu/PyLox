@@ -4,65 +4,47 @@ from app.stringify import stringify
 from app.environment import Environment
 from app.lox_callable import LoxCallable
 from app.lox_function import LoxFunction, ReturnValue
-import time 
+import time  # Import the time module for our native function
 
-class NativeClock(LoxCallable):
-    """A native Lox function that returns the current time."""
+# --- NEW: A class to represent our native clock() function ---
+class ClockNative(LoxCallable):
+    """A native Lox function that returns the current time in seconds."""
     def arity(self) -> int:
+        # clock() takes 0 arguments.
         return 0
 
-    def call(self, interpreter, arguments: list) -> float:
-        return time.time()
+    def call(self, interpreter, arguments):
+        # Return the current Unix timestamp.
+        return float(time.time())
 
     def __repr__(self):
         return "<native fn>"
 
 class Evaluator(Visitor, StmtVisitor):
     def __init__(self):
-        self.environment = Environment()
+        # The 'globals' environment holds all top-level variables.
+        self.globals = Environment()
+        self.environment = self.globals
+        
+        # --- FIX: Define the native clock function in the global scope ---
+        self.globals.define("clock", ClockNative())
 
     def evaluate_statements(self, statements: list[Stmt]):
-        """
-        Evaluates a list of statements.
-        Returns the value of the last expression statement, if any.
-        """
         last_value = None
         try:
             for statement in statements:
-                # Execute the statement and capture its potential return value.
                 result = self.execute(statement)
-                # If the statement was an expression, store its value.
                 if isinstance(statement, Expression):
                     last_value = result
         except RuntimeError as e:
-            # Catch runtime errors and re-raise them to be handled by main.
             raise e
         return last_value
         
-        # --- NEW: Visitor method for function declarations ---
-    def visit_function(self, stmt: Function):
-            # Create a LoxFunction object, capturing the current environment as the closure.
-            function = LoxFunction(stmt, self.environment)
-            # Define the function in the current environment.
-            self.environment.define(stmt.name.lexeme, function)
-    
-        # --- NEW: Visitor method for return statements ---
-    def visit_return(self, stmt: Return):
-            value = None
-            if stmt.value is not None:
-                value = self.evaluate(stmt.value)
-            # Raise the custom exception to unwind the stack and carry the return value.
-            raise ReturnValue(value)
-           
     def evaluate(self, expr:Expr):
-        """Evaluates a single expression by accepting a visitor."""
         return expr.accept(self)
 
     def execute(self, stmt: Stmt):
         return stmt.accept(self)
-
-    def visit_block(self, stmt: Block):
-        self.execute_block(stmt.statements, Environment(self.environment))
         
     def execute_block(self, statements: list[Stmt], environment: Environment):
         previous = self.environment
@@ -73,61 +55,72 @@ class Evaluator(Visitor, StmtVisitor):
         finally:
             self.environment = previous
 
+    def visit_block(self, stmt: Block):
+        self.execute_block(stmt.statements, Environment(self.environment))
+        
+    def visit_call(self, expr: Call):
+        callee = self.evaluate(expr.callee)
+
+        arguments = []
+        for argument in expr.arguments:
+            arguments.append(self.evaluate(argument))
+
+        if not isinstance(callee, LoxCallable):
+            raise RuntimeError(f"Can only call functions and classes.\n[line {expr.paren.line}]")
+
+        if len(arguments) != callee.arity():
+            raise RuntimeError(f"Expected {callee.arity()} arguments but got {len(arguments)}.\n[line {expr.paren.line}]")
+
+        return callee.call(self, arguments)
+
+    def visit_function(self, stmt: Function):
+        # Create a LoxFunction, capturing the current environment as its closure.
+        function = LoxFunction(stmt, self.environment)
+        self.environment.define(stmt.name.lexeme, function)
+        return None
+
+    def visit_return(self, stmt: Return):
+        value = None
+        if stmt.value is not None:
+            value = self.evaluate(stmt.value)
+        # Use a custom exception to unwind the stack and return the value.
+        raise ReturnValue(value)
+
     def visit_if(self, stmt: If):
-        """Executes an if statement."""
         if self._is_truthy(self.evaluate(stmt.condition)):
             self.execute(stmt.then_branch)
         elif stmt.else_branch is not None:
             self.execute(stmt.else_branch)
         return None
         
-    def visit_call(self, node: Call):
-            """Evaluates a function call expression."""
-            callee = self.evaluate(node.callee)
-    
-            arguments = []
-            for argument in node.arguments:
-                arguments.append(self.evaluate(argument))
-    
-            if not isinstance(callee, LoxCallable):
-                raise RuntimeError(f"[line {node.paren.line}] Can only call functions and classes.")
-    
-            if len(arguments) != callee.arity():
-                raise RuntimeError(f"[line {node.paren.line}] Expected {callee.arity()} arguments but got {len(arguments)}.")
-    
-            return callee.call(self, arguments)
-        
     def visit_while(self, stmt: While):
-            while self._is_truthy(self.evaluate(stmt.condition)):
-                self.execute(stmt.body)
-        
-    def visit_logical(self, node: Logical):
-            left = self.evaluate(node.left)
-            
-            if node.operator.type == 'OR':
-                if self._is_truthy(left):
-                    return left # Short-circuit
-            else: # AND
-                if not self._is_truthy(left):
-                    return left # Short-circuit
+        while self._is_truthy(self.evaluate(stmt.condition)):
+            self.execute(stmt.body)
     
-            return self.evaluate(node.right)
+    def visit_logical(self, node: Logical):
+        left = self.evaluate(node.left)
+        
+        if node.operator.type == 'OR':
+            if self._is_truthy(left):
+                return left # Short-circuit
+        else: # AND
+            if not self._is_truthy(left):
+                return left # Short-circuit
+
+        return self.evaluate(node.right)
 
     def visit_var(self, stmt:Var):
         value = None
         if stmt.initializer is not None:
             value = self.evaluate(stmt.initializer)
-        # Define the variable in the environment.
         self.environment.define(stmt.name.lexeme, value)
         return None
     
     def visit_print(self, stmt: Print):
         value = self.evaluate(stmt.expression)
         print(stringify(value))
-        # A print statement has no value, so it implicitly returns None.
 
     def visit_expression(self, stmt: Expression):
-        # Evaluate the expression and return its value.
         return self.evaluate(stmt.expression)
     
     def visit_assign(self, node: Assign):
@@ -137,7 +130,7 @@ class Evaluator(Visitor, StmtVisitor):
     
     def visit_variable(self, node):
         return self.environment.get(node.name)
-       
+        
     def visit_literal(self, node: Literal):
         return node.value
 
@@ -214,3 +207,4 @@ class Evaluator(Visitor, StmtVisitor):
     def _check_number_operands(self, operator, left, right):
         if isinstance(left, float) and isinstance(right, float): return
         raise RuntimeError(f"[line {operator.line}] Error: Operands must be numbers.")
+
