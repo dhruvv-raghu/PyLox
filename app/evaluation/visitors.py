@@ -62,4 +62,9 @@ class StmtVisitor(ABC):
      def visit_if(self, stmt):
            """Visit an if statement."""
            pass
+    
+     @abstractmethod
+     def visit_while(self, stmt):
+           """Visit a while statement."""
+           pass
      

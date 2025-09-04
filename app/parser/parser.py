@@ -1,4 +1,4 @@
-from app.parser.ast import Var, Print, Expression, Assign, Variable, Literal, Grouping, Unary, Binary, Block, If, Logical
+from app.parser.ast import Var, Print, Expression, Assign, Variable, Literal, Grouping, Unary, Binary, Block, If, Logical, While 
 import sys
 
 # A simple custom exception class for signaling a parse error.
@@ -39,6 +39,57 @@ class Parser:
         if self.match('ELSE'):
             else_branch = self.statement()
         return If(condition, then_branch, else_branch)
+        
+    def for_statement(self):
+        self.consume('LEFT_PAREN', "Expect '(' after 'for'.")
+
+        # 1. Initializer
+        initializer = None
+        if self.match('SEMICOLON'):
+            pass # No initializer
+        elif self.match('VAR'):
+            initializer = self.var_declaration()
+        else:
+            initializer = self.expression_statement()
+        
+        # 2. Condition
+        condition = None
+        if not self.check('SEMICOLON'):
+            condition = self.expression()
+        self.consume('SEMICOLON', "Expect ';' after loop condition.")
+
+        # 3. Increment
+        increment = None
+        if not self.check('RIGHT_PAREN'):
+            increment = self.expression()
+        self.consume('RIGHT_PAREN', "Expect ')' after for clauses.")
+        
+        body = self.statement()
+
+        # --- DESUGARING ---
+        if increment is not None:
+            # Add the increment to the end of the original body
+            body = Block([body, Expression(increment)])
+        
+        if condition is None:
+            # If no condition, it's an infinite loop
+            condition = Literal(True)
+        
+        # Create the main while loop
+        body = While(condition, body)
+
+        if initializer is not None:
+            # Wrap the whole thing in a block with the initializer
+            body = Block([initializer, body])
+        
+        return body
+
+    def while_statement(self):
+        self.consume('LEFT_PAREN', "Expect '(' after 'while'.")
+        condition = self.expression()
+        self.consume('RIGHT_PAREN', "Expect ')' after condition.")
+        body = self.statement()
+        return While(condition, body)
 
     def block(self):
         statements = []
