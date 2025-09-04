@@ -1,4 +1,5 @@
 from app.evaluation.visitors import Visitor, StmtVisitor
+from typing import List
 
 # --- Base Classes ---
 class Expr:
@@ -8,6 +9,12 @@ class Expr:
 class Stmt:
     def accept(self, visitor: StmtVisitor):
         raise NotImplementedError("Subclasses must implement this method")
+class Block(Stmt):
+    def __init__(self, statements: List[Stmt]):
+                self.statements = statements
+        
+    def accept(self, visitor: StmtVisitor):
+                return visitor.visit_block(self)
 
 # --- Statement Node Classes ---
 

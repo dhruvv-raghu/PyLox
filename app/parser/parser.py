@@ -1,4 +1,5 @@
-from app.parser.ast import Var, Print, Expression, Assign, Variable, Literal, Grouping, Unary, Binary
+from posix import stat
+from app.parser.ast import Var, Print, Expression, Assign, Variable, Literal, Grouping, Unary, Binary, Block
 import sys
 
 # A simple custom exception class for signaling a parse error.
@@ -23,14 +24,32 @@ class Parser:
             statements.append(self.statement())
         return statements
         
+    def declaration(self):
+        try:
+            if self.match('VAR'):
+                return self.var_declaration()
+            return self.statement()
+        except ParseError:
+            raise 
+        
     def statement(self):
         """Parses one statement or declaration."""
+        if self.match('LEFT_BRACE'):
+            return Block(self.block())
         if self.match('VAR'):
             return self.var_declaration()
         if self.match('PRINT'):
             return self.print_statement()
         return self.expression_statement()
+        
+    def block(self):
+        statements = []
+        while not self.check('RIGHT_BRACE') and not self.is_at_end():
+            statements.append(self.declaration())
 
+        self.consume('RIGHT_BRACE', "Expect '}' after block.")
+        return statements
+        
     def var_declaration(self):
         name = self.consume('IDENTIFIER', "Expect variable name.")
         initializer = None

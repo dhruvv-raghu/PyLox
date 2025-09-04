@@ -1,4 +1,4 @@
-from app.parser.ast import Expr, Stmt, Print, Expression, Literal, Grouping, Unary, Binary, Assign, Variable, Var
+from app.parser.ast import Expr, Stmt, Print, Expression, Literal, Grouping, Unary, Binary, Assign, Variable, Var, Block
 from app.evaluation.visitors import Visitor, StmtVisitor
 from app.stringify import stringify
 from app.environment import Environment
@@ -32,7 +32,17 @@ class Evaluator(Visitor, StmtVisitor):
     def execute(self, stmt: Stmt):
         return stmt.accept(self)
 
-    # --- FIX: Renamed methods to match the Visitor base class conventions ---
+    def visit_block(self, stmt: Block):
+        self.execute_block(stmt.statements, Environment(self.environment))
+        
+    def execute_block(self, statements: list[Stmt], environment: Environment):
+        previous = self.environment
+        try:
+            self.environment = environment
+            for statement in statements:
+                self.execute(statement)
+        finally:
+            self.environment = previous
 
     def visit_var(self, stmt:Var):
         value = None

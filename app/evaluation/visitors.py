@@ -32,6 +32,12 @@ class Visitor(ABC):
         pass
    
 class StmtVisitor(ABC):
+    
+     @abstractmethod
+     def visit_block(self, stmt):
+           """Visit a block statement."""
+           pass
+           
      @abstractmethod
      def visit_expression(self, stmt):
            """Visit an expression statement."""
