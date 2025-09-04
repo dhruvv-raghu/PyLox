@@ -1,6 +1,5 @@
 import sys
 from app.parser.parser import Parser, ParseError
-# --- FIX: Import the Expression AST node ---
 from app.parser.ast import Expression
 from app.scan_for.parentheses import ParenthesesScanner
 from app.evaluation.evaluator import Evaluator
@@ -52,6 +51,7 @@ def main():
         return
 
     if command == 'evaluate':
+        # 'evaluate' will run without the resolver for simpler testing.
         scanner = ParenthesesScanner(filename)
         tokens = scanner.scan_all()
         if scanner.has_error:
@@ -67,9 +67,6 @@ def main():
         try:
             result = evaluator.evaluate_statements(statements)
             
-            # --- FIX: Check if the last statement was an expression ---
-            # This correctly handles printing 'nil' while suppressing output
-            # for non-expression statements.
             if statements and isinstance(statements[-1], Expression):
                 print(stringify(result))
 
@@ -98,6 +95,10 @@ def main():
         # Step 3: Resolution
         resolver = Resolver(evaluator)
         resolver.resolve_statements(statements)
+        
+        # --- FIX: Check for resolution errors before evaluating ---
+        if resolver.had_error:
+            exit(65)
         
         # Step 4: Evaluation (Interpretation)
         try:
