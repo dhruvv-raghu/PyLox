@@ -1,8 +1,9 @@
 import sys
-from app.parser.parser import Parser, ParseError 
+from app.parser.parser import Parser, ParseError
 from app.scan_for.parentheses import ParenthesesScanner
 from app.evaluation.evaluator import Evaluator
 from app.stringify import stringify
+from app.resolver.resolver import Resolver 
 
 def main():
     if len(sys.argv) < 3:
@@ -21,19 +22,15 @@ def main():
         tokens = scanner.scan_all()
         
         for token in tokens:
-            
             literal_to_print = token.literal
             if isinstance(literal_to_print, float):
                 literal_to_print = f"{literal_to_print}"
             elif literal_to_print is None:
                 literal_to_print = "null"
-
             print(f"{token.type} {token.lexeme} {literal_to_print}")
-
-    
+        
         if scanner.has_error:
             exit(65)
-
         return
     
     if command == 'parse':
@@ -47,10 +44,10 @@ def main():
             ast = parser.parse()
         except ParseError:
             exit(65)
-        if ast is None: # Or check a parser error flag
-            exit(65)
-            
-        print(ast[0])
+        
+        if ast:
+            print(ast[0])
+        return
 
     if command == 'evaluate':
         scanner = ParenthesesScanner(filename)
@@ -59,41 +56,50 @@ def main():
             exit(65)
         
         parser = Parser(tokens)
-        ast = parser.parse()
-
-        if ast is None:
-            exit(65)
-
-        evaluator = Evaluator()
         try:
-           result = evaluator.evaluate_statements(ast)
-        except RuntimeError:
-            exit(70)
-
-        print(stringify(result))
-
-    if command == 'run':
-        scanner = ParenthesesScanner(filename)
-        tokens = scanner.scan_all()
-
-        if scanner.has_error:
-            exit(65)
-
-        parser = Parser(tokens)
-        try:
-            ast = parser.parse()
+            statements = parser.parse()
         except ParseError:
             exit(65)
 
-        if ast is None:
-            exit(65)
-
         evaluator = Evaluator()
         try:
-            result = evaluator.evaluate_statements(ast)
+            result = evaluator.evaluate_statements(statements)
+            if result is not None:
+                print(stringify(result))
         except RuntimeError as e:
-            print(f"Runtime error: {e}", file=sys.stderr)
+            print(e, file=sys.stderr)
+            exit(70)
+        return
+
+    if command == 'run':
+        # Step 1: Scanning
+        scanner = ParenthesesScanner(filename)
+        tokens = scanner.scan_all()
+        if scanner.has_error:
+            exit(65)
+
+        # Step 2: Parsing
+        parser = Parser(tokens)
+        try:
+            statements = parser.parse()
+        except ParseError:
+            exit(65)
+
+        # Create the interpreter instance that will run the code.
+        evaluator = Evaluator()
+
+        # Step 3: Resolution
+        resolver = Resolver(evaluator)
+        # You could add a try/except here for resolution errors if your resolver reports them.
+        resolver.resolve_statements(statements)
+        
+        # Step 4: Evaluation (Interpretation)
+        try:
+            evaluator.evaluate_statements(statements)
+        except RuntimeError as e:
+            print(e, file=sys.stderr)
             exit(70)
 
 if __name__ == "__main__":
     main()
+
