@@ -9,8 +9,8 @@ from app.parser.ast import (
 from app.scan_for.tokens import Token
 from app.environment import Environment
 from app.stringify import stringify
-from app.lox_callable import LoxCallable
-from app.lox_function import LoxFunction, ReturnValue
+from app.lox_callable import LoxCallable, ReturnValue
+from app.lox_function import LoxFunction
 from app.lox_class import LoxClass
 from app.lox_instance import LoxInstance
 
