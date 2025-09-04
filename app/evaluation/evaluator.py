@@ -5,6 +5,7 @@ from app.parser.ast import (
     Variable, Assign, Block, If, Logical, While, Call, Function, Return,
     Class, Get, Set, This
 )
+from app.scan_for.tokens import Token
 from app.evaluation.visitors import Visitor, StmtVisitor
 from app.environment import Environment
 from app.stringify import stringify
@@ -12,41 +13,38 @@ from app.lox_callable import LoxCallable, ReturnValue
 from app.lox_function import LoxFunction
 from app.lox_class import LoxClass
 from app.lox_instance import LoxInstance
-from typing import Dict
-
-from app.scan_for.tokens import Token
+from typing import Dict, Any
 
 class NativeClock(LoxCallable):
     def arity(self) -> int: return 0
-    def call(self, interpreter, arguments: list) -> float: return time.time()
+    def call(self, interpreter: Any, arguments: list) -> float: return time.time()
     def __repr__(self): return "<native fn>"
 
 class Evaluator(Visitor, StmtVisitor):
     def __init__(self):
         self.globals = Environment()
-        # --- FIX: Add a dictionary to store resolved variable depths ---
         self.locals: Dict[Expr, int] = {}
         self.environment = self.globals
         self.globals.define("clock", NativeClock())
 
-    # --- FIX: Add the missing 'resolve' method ---
     def resolve(self, expr: Expr, depth: int):
-        """
-        Stores the resolved scope distance for a variable expression.
-        This is called by the Resolver.
-        """
         self.locals[expr] = depth
 
     def evaluate_statements(self, statements: list[Stmt]):
+        last_value = None
         try:
             for statement in statements:
-                if statement: self.execute(statement)
+                if statement:
+                    result = self.execute(statement)
+                    if isinstance(statement, Expression):
+                        last_value = result
         except RuntimeError as e:
-            print(e, file=sys.stderr)
-            exit(70)
+            # Let main.py handle printing the error and exiting.
+            raise e
+        return last_value
 
     def execute(self, stmt: Stmt):
-        stmt.accept(self)
+        return stmt.accept(self)
 
     def execute_block(self, statements: list[Stmt], environment: Environment):
         previous = self.environment
@@ -60,17 +58,14 @@ class Evaluator(Visitor, StmtVisitor):
     def evaluate(self, expr: Expr):
         return expr.accept(self)
     
-    # --- FIX: New helper to look up variables using resolved data ---
     def _look_up_variable(self, name: Token, expr: Expr):
         distance = self.locals.get(expr)
         if distance is not None:
             return self.environment.get_at(distance, name.lexeme)
         else:
-            # Fallback for global variables (which are not "resolved")
             return self.globals.get(name)
 
     def visit_variable(self, node: Variable):
-        # Use the new lookup helper
         return self._look_up_variable(node.name, node)
 
     def visit_assign(self, node: Assign):
@@ -79,7 +74,6 @@ class Evaluator(Visitor, StmtVisitor):
         if distance is not None:
             self.environment.assign_at(distance, node.name, value)
         else:
-            # Fallback for global variables
             self.globals.assign(node.name, value)
         return value
 
@@ -168,7 +162,9 @@ class Evaluator(Visitor, StmtVisitor):
         print(stringify(value))
 
     def visit_expression(self, stmt: Expression):
-        self.evaluate(stmt.expression)
+        # --- THE FIX IS HERE ---
+        # Ensure the computed value of the expression is returned.
+        return self.evaluate(stmt.expression)
     
     def visit_literal(self, node: Literal):
         return node.value
