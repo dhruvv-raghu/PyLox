@@ -1,4 +1,4 @@
-from app.parser.ast import Expr, Stmt, Print, Expression, Literal, Grouping, Unary, Binary, Assign, Variable, Var, Block
+from app.parser.ast import Expr, Stmt, Print, Expression, Literal, Grouping, Unary, Binary, Assign, Variable, Var, Block, If
 from app.evaluation.visitors import Visitor, StmtVisitor
 from app.stringify import stringify
 from app.environment import Environment
@@ -43,6 +43,14 @@ class Evaluator(Visitor, StmtVisitor):
                 self.execute(statement)
         finally:
             self.environment = previous
+
+    def visit_if(self, stmt: If):
+        """Executes an if statement."""
+        if self._is_truthy(self.evaluate(stmt.condition)):
+            self.execute(stmt.then_branch)
+        elif stmt.else_branch is not None:
+            self.execute(stmt.else_branch)
+        return None
 
     def visit_var(self, stmt:Var):
         value = None

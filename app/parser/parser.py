@@ -1,5 +1,4 @@
-from posix import stat
-from app.parser.ast import Var, Print, Expression, Assign, Variable, Literal, Grouping, Unary, Binary, Block
+from app.parser.ast import Var, Print, Expression, Assign, Variable, Literal, Grouping, Unary, Binary, Block, If
 import sys
 
 # A simple custom exception class for signaling a parse error.
@@ -41,6 +40,16 @@ class Parser:
         if self.match('PRINT'):
             return self.print_statement()
         return self.expression_statement()
+    
+    def if_statement(self):
+        self.consume('LEFT_PAREN', "Expect '(' after 'if'.")
+        condition = self.expression()
+        self.consume('RIGHT_PAREN', "Expect ')' after if condition.")
+        then_branch = self.statement()
+        else_branch = None
+        if self.match('ELSE'):
+            else_branch = self.statement()
+        return If(condition, then_branch, else_branch)
         
     def block(self):
         statements = []
