@@ -4,7 +4,7 @@ from app.parser.ast import Expression
 from app.scan_for.parentheses import ParenthesesScanner
 from app.evaluation.evaluator import Evaluator
 from app.stringify import stringify
-from app.resolver import Resolver 
+from app.resolver.resolver import Resolver 
 
 def main():
     if len(sys.argv) < 3:
