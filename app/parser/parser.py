@@ -11,51 +11,24 @@ class Parser:
         self.current = 0
 
     def parse(self):
-        """
-        The main entry point. Parses a list of statements.
-        Will raise a ParseError if it encounters invalid syntax.
-        """
         statements = []
         while not self.is_at_end():
-            # The main loop should call declaration(), which is the highest-level rule.
             statements.append(self.declaration())
         return statements
 
     def declaration(self):
-        """Parses a declaration, dispatching to the correct rule."""
         if self.match('VAR'):
             return self.var_declaration()
         return self.statement()
 
     def statement(self):
-        """Parses one statement. Does not handle var declarations directly anymore."""
         if self.match('IF'):
             return self.if_statement()
         if self.match('LEFT_BRACE'):
             return Block(self.block())
-        # The VAR check is removed from here.
         if self.match('PRINT'):
             return self.print_statement()
         return self.expression_statement()
-        
-    
-    # --- NEW METHOD for 'or' ---
-    def logic_or(self):
-        expr = self.logic_and()
-        while self.match('OR'):
-            operator = self.previous()
-            right = self.logic_and()
-            expr = Logical(expr, operator, right)
-        return expr
-
-    # --- NEW METHOD for 'and' ---
-    def logic_and(self):
-        expr = self.equality()
-        while self.match('AND'):
-            operator = self.previous()
-            right = self.equality()
-            expr = Logical(expr, operator, right)
-        return expr
 
     def if_statement(self):
         self.consume('LEFT_PAREN', "Expect '(' after 'if'.")
@@ -88,7 +61,6 @@ class Parser:
         return Print(value)
 
     def expression_statement(self):
-        """Parses an expression statement. The semicolon is optional."""
         expr = self.expression()
         self.match('SEMICOLON')
         return Expression(expr)
@@ -97,7 +69,8 @@ class Parser:
         return self.assignment()
 
     def assignment(self):
-        expr = self.equality()
+        # The entry to the expression hierarchy now starts at the lowest precedence operator.
+        expr = self.logic_or()
         if self.match('EQUAL'):
             equals = self.previous()
             value = self.assignment()
@@ -105,6 +78,24 @@ class Parser:
                 name = expr.name
                 return Assign(name, value)
             raise self.error(equals, "Invalid assignment target.")
+        return expr
+
+    # --- NEW: LOGIC OR ---
+    def logic_or(self):
+        expr = self.logic_and()
+        while self.match('OR'):
+            operator = self.previous()
+            right = self.logic_and()
+            expr = Logical(expr, operator, right)
+        return expr
+
+    # --- NEW: LOGIC AND ---
+    def logic_and(self):
+        expr = self.equality()
+        while self.match('AND'):
+            operator = self.previous()
+            right = self.equality()
+            expr = Logical(expr, operator, right)
         return expr
 
     def equality(self):
@@ -159,7 +150,6 @@ class Parser:
         raise self.error(self.peek(), "Expect expression.")
 
     def error(self, token, message):
-        """Reports an error to stderr and returns the ParseError to be raised."""
         if token.type == 'EOF':
             print(f"[line {token.line}] Error at end: {message}", file=sys.stderr)
         else:
