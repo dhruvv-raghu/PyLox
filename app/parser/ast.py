@@ -1,5 +1,5 @@
 from app.evaluation.visitors import Visitor, StmtVisitor
-from typing import List
+from typing import List, Optional
 
 # --- Base Classes ---
 class Expr:
