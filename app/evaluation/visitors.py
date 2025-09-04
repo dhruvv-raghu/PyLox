@@ -30,6 +30,11 @@ class Visitor(ABC):
    def visit_grouping(self, node):
         """Visit a node in the AST."""
         pass
+       
+   @abstractmethod         
+   def visit_logical(self, node):
+        """Visit a logical expression node in the AST."""
+        pass
    
 class StmtVisitor(ABC):
     

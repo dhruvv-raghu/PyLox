@@ -1,4 +1,4 @@
-from app.parser.ast import Expr, Stmt, Print, Expression, Literal, Grouping, Unary, Binary, Assign, Variable, Var, Block, If
+from app.parser.ast import Expr, Stmt, Print, Expression, Literal, Grouping, Unary, Binary, Assign, Variable, Var, Block, If, Logical
 from app.evaluation.visitors import Visitor, StmtVisitor
 from app.stringify import stringify
 from app.environment import Environment
@@ -51,6 +51,18 @@ class Evaluator(Visitor, StmtVisitor):
         elif stmt.else_branch is not None:
             self.execute(stmt.else_branch)
         return None
+        
+    def visit_logical(self, node: Logical):
+            left = self.evaluate(node.left)
+            
+            if node.operator.type == 'OR':
+                if self._is_truthy(left):
+                    return left # Short-circuit
+            else: # AND
+                if not self._is_truthy(left):
+                    return left # Short-circuit
+    
+            return self.evaluate(node.right)
 
     def visit_var(self, stmt:Var):
         value = None

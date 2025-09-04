@@ -1,4 +1,4 @@
-from app.parser.ast import Var, Print, Expression, Assign, Variable, Literal, Grouping, Unary, Binary, Block, If
+from app.parser.ast import Var, Print, Expression, Assign, Variable, Literal, Grouping, Unary, Binary, Block, If, Logical
 import sys
 
 # A simple custom exception class for signaling a parse error.
@@ -37,6 +37,25 @@ class Parser:
         if self.match('PRINT'):
             return self.print_statement()
         return self.expression_statement()
+        
+    
+    # --- NEW METHOD for 'or' ---
+    def logic_or(self):
+        expr = self.logic_and()
+        while self.match('OR'):
+            operator = self.previous()
+            right = self.logic_and()
+            expr = Logical(expr, operator, right)
+        return expr
+
+    # --- NEW METHOD for 'and' ---
+    def logic_and(self):
+        expr = self.equality()
+        while self.match('AND'):
+            operator = self.previous()
+            right = self.equality()
+            expr = Logical(expr, operator, right)
+        return expr
 
     def if_statement(self):
         self.consume('LEFT_PAREN', "Expect '(' after 'if'.")

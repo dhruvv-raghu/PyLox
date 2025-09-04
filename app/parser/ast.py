@@ -1,5 +1,6 @@
 from app.evaluation.visitors import Visitor, StmtVisitor
 from typing import List, Optional
+from app.scan_for.tokens import Token
 
 # --- Base Classes ---
 class Expr:
@@ -25,6 +26,14 @@ class If(Stmt):
     def accept(self, visitor: 'StmtVisitor'):
         return visitor.visit_if(self)
 
+class Logical(Expr):
+    def __init__(self, left: Expr, operator: Token, right: Expr):
+        self.left = left
+        self.operator = operator
+        self.right = right
+
+    def accept(self, visitor: Visitor):
+        return visitor.visit_logical(self)
 # --- Statement Node Classes ---
 
 class Var(Stmt):
