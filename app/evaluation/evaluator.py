@@ -51,66 +51,66 @@ class Evaluator(Visitor, StmtVisitor):
         # Evaluate the expression and return its value.
         return self.evaluate(stmt.expression)
     
-    def visit_assign(self, expr: Assign):
-        value = self.evaluate(expr.value)
-        self.environment.assign(expr.name, value)
+    def visit_assign(self, node: Assign):
+        value = self.evaluate(node.value)
+        self.environment.assign(node.name, value)
         return value
     
     def visit_variable(self, node):
         return self.environment.get(node.name)
        
-    def visit_literal(self, expr: Literal):
-        return expr.value
+    def visit_literal(self, node: Literal):
+        return node.value
 
-    def visit_grouping(self, expr: Grouping):
-        return self.evaluate(expr.expression)
+    def visit_grouping(self, node: Grouping):
+        return self.evaluate(node.expression)
 
-    def visit_unary(self, expr: Unary):
-        right = self.evaluate(expr.right)
-        op_type = expr.operator.type
+    def visit_unary(self, node: Unary):
+        right = self.evaluate(node.right)
+        op_type = node.operator.type
 
         if op_type == 'MINUS':
-            self._check_number_operand(expr.operator, right)
+            self._check_number_operand(node.operator, right)
             return -float(right)
         if op_type == 'BANG':
             return not self._is_truthy(right)
         
         return None # Should be unreachable
 
-    def visit_binary(self, expr: Binary):
-        left = self.evaluate(expr.left)
-        right = self.evaluate(expr.right)
-        op_type = expr.operator.type
+    def visit_binary(self, node: Binary):
+        left = self.evaluate(node.left)
+        right = self.evaluate(node.right)
+        op_type = node.operator.type
 
         if op_type == 'MINUS':
-            self._check_number_operands(expr.operator, left, right)
+            self._check_number_operands(node.operator, left, right)
             return float(left) - float(right)
         if op_type == 'SLASH':
-            self._check_number_operands(expr.operator, left, right)
+            self._check_number_operands(node.operator, left, right)
             if float(right) == 0.0:
-                raise RuntimeError(f"Error: Division by zero.\n [line {expr.operator.line}]")
+                raise RuntimeError(f"Error: Division by zero.\n [line {node.operator.line}]")
             return float(left) / float(right)
         if op_type == 'STAR':
-            self._check_number_operands(expr.operator, left, right)
+            self._check_number_operands(node.operator, left, right)
             return float(left) * float(right)
         if op_type == 'PLUS':
             if isinstance(left, float) and isinstance(right, float):
                 return left + right
             if isinstance(left, str) and isinstance(right, str):
                 return left + right
-            raise RuntimeError(f" Operands must be two numbers or two strings.\n [line {expr.operator.line}]")
+            raise RuntimeError(f" Operands must be two numbers or two strings.\n [line {node.operator.line}]")
 
         if op_type == 'GREATER':
-            self._check_number_operands(expr.operator, left, right)
+            self._check_number_operands(node.operator, left, right)
             return left > right
         if op_type == 'GREATER_EQUAL':
-            self._check_number_operands(expr.operator, left, right)
+            self._check_number_operands(node.operator, left, right)
             return left >= right
         if op_type == 'LESS':
-            self._check_number_operands(expr.operator, left, right)
+            self._check_number_operands(node.operator, left, right)
             return left < right
         if op_type == 'LESS_EQUAL':
-            self._check_number_operands(expr.operator, left, right)
+            self._check_number_operands(node.operator, left, right)
             return left <= right
 
         if op_type == 'BANG_EQUAL': return not self._is_equal(left, right)

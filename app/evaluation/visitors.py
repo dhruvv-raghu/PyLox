@@ -1,13 +1,14 @@
 from abc import ABC, abstractmethod
+from typing import Any
 
 class Visitor(ABC):
 
    @abstractmethod
-   def visit_binary(self, node):
+   def visit_binary(self, node)-> Any:
        pass
    
    @abstractmethod
-   def visit_unary(self, node):
+   def visit_unary(self, node)-> Any:
          """Visit a node in the AST."""
          pass
    
@@ -16,9 +17,11 @@ class Visitor(ABC):
         """Visit a node in the AST."""
         pass
    
+   @abstractmethod
    def visit_assign(self, node):
         pass
    
+   @abstractmethod
    def visit_variable(self, node):
         """Visit a variable node in the AST."""
         pass
@@ -39,6 +42,7 @@ class StmtVisitor(ABC):
            """Visit a print statement."""
            pass
      
+     @abstractmethod
      def visit_var(self, stmt):
            """Visit a variable declaration statement."""
            pass

@@ -1,5 +1,4 @@
-from app.parser.ast import Expr, Stmt, Var, Print, Expression, Assign, Variable, Literal, Grouping, Unary, Binary
-from app.scan_for.tokens import Token 
+from app.parser.ast import Var, Print, Expression, Assign, Variable, Literal, Grouping, Unary, Binary
 import sys
 
 # A simple custom exception class for signaling a parse error.
@@ -48,8 +47,6 @@ class Parser:
     def expression_statement(self):
         """Parses an expression statement. The semicolon is now optional."""
         expr = self.expression()
-        # --- FIX: Changed consume to match to make the semicolon optional ---
-        # This allows for REPL-like evaluation of single expressions without a trailing ';'.
         self.match('SEMICOLON')
         return Expression(expr)
         

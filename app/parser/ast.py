@@ -35,7 +35,6 @@ class Expression(Stmt):
     def accept(self, visitor: StmtVisitor):
         return visitor.visit_expression(self)
 
-    # --- NEW: __repr__ method for pretty-printing ---
     def __repr__(self):
         """Delegates the string representation to the expression it holds."""
         return str(self.expression)
