@@ -24,7 +24,7 @@ class LoxCallable(ABC):
         pass
 
     @abstractmethod
-    def call(self, interpreter, arguments: List[Any]):
+    def call(self, interpreter, arguments: List[Any])-> Any:
         """Executes the callable's logic."""
         pass
 
