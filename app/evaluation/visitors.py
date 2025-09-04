@@ -36,6 +36,11 @@ class Visitor(ABC):
         """Visit a logical expression node in the AST."""
         pass
    
+   @abstractmethod
+   def visit_call(self, node):
+        """Visit a function call node in the AST."""
+        pass
+        
 class StmtVisitor(ABC):
     
      @abstractmethod
@@ -68,3 +73,13 @@ class StmtVisitor(ABC):
            """Visit a while statement."""
            pass
      
+     @abstractmethod
+     def visit_function(self, stmt):
+           """Visit a function declaration statement."""
+           pass
+           
+     @abstractmethod
+     def visit_return(self, stmt):
+           """Visit a return statement."""
+           pass
+              

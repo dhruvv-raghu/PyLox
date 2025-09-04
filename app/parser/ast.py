@@ -17,6 +17,35 @@ class Block(Stmt):
     def accept(self, visitor: StmtVisitor):
                 return visitor.visit_block(self)
                 
+# --- NEW: Function and Return Statement Nodes ---
+class Function(Stmt):
+    """AST node for a function declaration statement."""
+    def __init__(self, name: Token, params: List[Token], body: List[Stmt]):
+        self.name = name
+        self.params = params
+        self.body = body
+
+    def accept(self, visitor: StmtVisitor):
+        return visitor.visit_function(self)
+
+class Return(Stmt):
+    """AST node for a return statement."""
+    def __init__(self, keyword: Token, value: Optional[Expr]):
+        self.keyword = keyword
+        self.value = value
+
+    def accept(self, visitor: StmtVisitor):
+        return visitor.visit_return(self)
+
+# --- Existing Expression Nodes (unchanged) ---
+class Call(Expr):
+    def __init__(self, callee: Expr, paren: Token, arguments: List[Expr]):
+        self.callee = callee
+        self.paren = paren
+        self.arguments = arguments
+    def accept(self, visitor: Visitor):
+        return visitor.visit_call(self)
+                
 class If(Stmt):
     def __init__(self, condition: Expr, then_branch: Stmt, else_branch: Optional[Stmt]):
         self.condition = condition

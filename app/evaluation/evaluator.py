@@ -1,7 +1,21 @@
-from app.parser.ast import Expr, Stmt, Print, Expression, Literal, Grouping, Unary, Binary, Assign, Variable, Var, Block, If, Logical, While
+from app.parser.ast import Expr, Stmt, Print, Expression, Literal, Grouping, Unary, Binary, Assign, Variable, Var, Block, If, Logical, While, Call, Function, Return
 from app.evaluation.visitors import Visitor, StmtVisitor
 from app.stringify import stringify
 from app.environment import Environment
+from app.lox_callable import LoxCallable
+from app.lox_function import LoxFunction, ReturnValue
+import time 
+
+class NativeClock(LoxCallable):
+    """A native Lox function that returns the current time."""
+    def arity(self) -> int:
+        return 0
+
+    def call(self, interpreter, arguments: list) -> float:
+        return time.time()
+
+    def __repr__(self):
+        return "<native fn>"
 
 class Evaluator(Visitor, StmtVisitor):
     def __init__(self):
@@ -24,6 +38,21 @@ class Evaluator(Visitor, StmtVisitor):
             # Catch runtime errors and re-raise them to be handled by main.
             raise e
         return last_value
+        
+        # --- NEW: Visitor method for function declarations ---
+    def visit_function(self, stmt: Function):
+            # Create a LoxFunction object, capturing the current environment as the closure.
+            function = LoxFunction(stmt, self.environment)
+            # Define the function in the current environment.
+            self.environment.define(stmt.name.lexeme, function)
+    
+        # --- NEW: Visitor method for return statements ---
+    def visit_return(self, stmt: Return):
+            value = None
+            if stmt.value is not None:
+                value = self.evaluate(stmt.value)
+            # Raise the custom exception to unwind the stack and carry the return value.
+            raise ReturnValue(value)
            
     def evaluate(self, expr:Expr):
         """Evaluates a single expression by accepting a visitor."""
@@ -51,6 +80,22 @@ class Evaluator(Visitor, StmtVisitor):
         elif stmt.else_branch is not None:
             self.execute(stmt.else_branch)
         return None
+        
+    def visit_call(self, node: Call):
+            """Evaluates a function call expression."""
+            callee = self.evaluate(node.callee)
+    
+            arguments = []
+            for argument in node.arguments:
+                arguments.append(self.evaluate(argument))
+    
+            if not isinstance(callee, LoxCallable):
+                raise RuntimeError(f"[line {node.paren.line}] Can only call functions and classes.")
+    
+            if len(arguments) != callee.arity():
+                raise RuntimeError(f"[line {node.paren.line}] Expected {callee.arity()} arguments but got {len(arguments)}.")
+    
+            return callee.call(self, arguments)
         
     def visit_while(self, stmt: While):
             while self._is_truthy(self.evaluate(stmt.condition)):

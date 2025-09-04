@@ -1,4 +1,4 @@
-from app.parser.ast import Var, Print, Expression, Assign, Variable, Literal, Grouping, Unary, Binary, Block, If, Logical, While
+from app.parser.ast import Var, Print, Expression, Assign, Variable, Literal, Grouping, Unary, Binary, Block, If, Logical, While, Function, Return
 import sys
 
 class ParseError(Exception):
@@ -17,9 +17,37 @@ class Parser:
 
     def declaration(self):
         """Parses a declaration, which can be a var declaration or a statement."""
+        if self.match('FUN'):
+            return self.function("function")
         if self.match('VAR'):
             return self.var_declaration()
         return self.statement()
+        
+    def function(self, kind: str):
+        """Parses a function declaration."""
+        name = self.consume('IDENTIFIER', f"Expect {kind} name.")
+        self.consume('LEFT_PAREN', f"Expect '(' after {kind} name.")
+        parameters = []
+        if not self.check('RIGHT_PAREN'):
+            while True:
+                if len(parameters) >= 255:
+                    self.error(self.peek(), "Can't have more than 255 parameters.")
+                parameters.append(self.consume('IDENTIFIER', "Expect parameter name."))
+                if not self.match('COMMA'):
+                    break
+        self.consume('RIGHT_PAREN', "Expect ')' after parameters.")
+        self.consume('LEFT_BRACE', f"Expect '{{' before {kind} body.")
+        body = self.block()
+        return Function(name, parameters, body)
+
+    def return_statement(self):
+        """Parses a return statement."""
+        keyword = self.previous()
+        value = None
+        if not self.check('SEMICOLON'):
+            value = self.expression()
+        self.consume('SEMICOLON', "Expect ';' after return value.")
+        return Return(keyword, value)
 
     def statement(self):
         """Parses a statement, dispatching to the correct rule based on the token."""
@@ -33,6 +61,8 @@ class Parser:
             return Block(self.block())
         if self.match('PRINT'):
             return self.print_statement()
+        if self.match('RETURN'):
+            return self.return_statement()
         return self.expression_statement()
 
     def for_statement(self):
