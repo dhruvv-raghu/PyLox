@@ -1,7 +1,6 @@
-from app.parser.ast import Var, Print, Expression, Assign, Variable, Literal, Grouping, Unary, Binary, Block, If, Logical, While 
+from app.parser.ast import Var, Print, Expression, Assign, Variable, Literal, Grouping, Unary, Binary, Block, If, Logical, While
 import sys
 
-# A simple custom exception class for signaling a parse error.
 class ParseError(Exception):
     pass
 
@@ -17,29 +16,25 @@ class Parser:
         return statements
 
     def declaration(self):
+        """Parses a declaration, which can be a var declaration or a statement."""
         if self.match('VAR'):
             return self.var_declaration()
         return self.statement()
 
     def statement(self):
+        """Parses a statement, dispatching to the correct rule based on the token."""
+        if self.match('FOR'):
+            return self.for_statement()
         if self.match('IF'):
             return self.if_statement()
+        if self.match('WHILE'):
+            return self.while_statement()
         if self.match('LEFT_BRACE'):
             return Block(self.block())
         if self.match('PRINT'):
             return self.print_statement()
         return self.expression_statement()
 
-    def if_statement(self):
-        self.consume('LEFT_PAREN', "Expect '(' after 'if'.")
-        condition = self.expression()
-        self.consume('RIGHT_PAREN', "Expect ')' after if condition.")
-        then_branch = self.statement()
-        else_branch = None
-        if self.match('ELSE'):
-            else_branch = self.statement()
-        return If(condition, then_branch, else_branch)
-        
     def for_statement(self):
         self.consume('LEFT_PAREN', "Expect '(' after 'for'.")
 
@@ -66,7 +61,7 @@ class Parser:
         
         body = self.statement()
 
-        # --- DESUGARING ---
+        # --- DESUGARING: Convert the for loop into a while loop ---
         if increment is not None:
             # Add the increment to the end of the original body
             body = Block([body, Expression(increment)])
@@ -90,6 +85,16 @@ class Parser:
         self.consume('RIGHT_PAREN', "Expect ')' after condition.")
         body = self.statement()
         return While(condition, body)
+
+    def if_statement(self):
+        self.consume('LEFT_PAREN', "Expect '(' after 'if'.")
+        condition = self.expression()
+        self.consume('RIGHT_PAREN', "Expect ')' after if condition.")
+        then_branch = self.statement()
+        else_branch = None
+        if self.match('ELSE'):
+            else_branch = self.statement()
+        return If(condition, then_branch, else_branch)
 
     def block(self):
         statements = []
@@ -120,7 +125,6 @@ class Parser:
         return self.assignment()
 
     def assignment(self):
-        # The entry to the expression hierarchy now starts at the lowest precedence operator.
         expr = self.logic_or()
         if self.match('EQUAL'):
             equals = self.previous()
@@ -131,7 +135,6 @@ class Parser:
             raise self.error(equals, "Invalid assignment target.")
         return expr
 
-    # --- NEW: LOGIC OR ---
     def logic_or(self):
         expr = self.logic_and()
         while self.match('OR'):
@@ -140,7 +143,6 @@ class Parser:
             expr = Logical(expr, operator, right)
         return expr
 
-    # --- NEW: LOGIC AND ---
     def logic_and(self):
         expr = self.equality()
         while self.match('AND'):
