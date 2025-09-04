@@ -17,21 +17,20 @@ class Parser:
     def parse(self):
         statements = []
         while not self.is_at_end():
+            # The main loop now calls declaration, which will raise an error on failure.
             statements.append(self.declaration())
         return statements
 
     def declaration(self):
-        try:
-            if self.match('CLASS'):
-                return self.class_declaration()
-            if self.match('FUN'):
-                return self.function("function")
-            if self.match('VAR'):
-                return self.var_declaration()
-            return self.statement()
-        except ParseError:
-            self.synchronize()
-            return None # Return None on error
+        # --- FIX: Removed the internal try/except block ---
+        # This will now let ParseError exceptions propagate up to main.py
+        if self.match('CLASS'):
+            return self.class_declaration()
+        if self.match('FUN'):
+            return self.function("function")
+        if self.match('VAR'):
+            return self.var_declaration()
+        return self.statement()
 
     def class_declaration(self):
         name = self.consume('IDENTIFIER', "Expect class name.")
@@ -287,14 +286,5 @@ class Parser:
     def previous(self):
         return self.tokens[self.current - 1]
     
-    def synchronize(self):
-        self.advance()
-        while not self.is_at_end():
-            if self.previous().type == 'SEMICOLON': return
-
-            token_type = self.peek().type
-            if token_type in ['CLASS', 'FUN', 'VAR', 'FOR', 'IF', 'WHILE', 'PRINT', 'RETURN']:
-                return
-
-            self.advance()
+    # --- FIX: Removed the synchronize method ---
 
