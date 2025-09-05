@@ -17,21 +17,22 @@ class Parser:
     def parse(self):
         statements = []
         while not self.is_at_end():
+            # Declaration will now raise an exception on error instead of returning None.
             statements.append(self.declaration())
         return statements
 
     def declaration(self):
-        try:
-            if self.match('CLASS'):
-                return self.class_declaration()
-            if self.match('FUN'):
-                return self.function("function")
-            if self.match('VAR'):
-                return self.var_declaration()
-            return self.statement()
-        except ParseError:
-            self.synchronize()
-            return None
+        """
+        Parses a declaration. If it finds an error, it will raise a ParseError
+        which will be caught by the main script.
+        """
+        if self.match('CLASS'):
+            return self.class_declaration()
+        if self.match('FUN'):
+            return self.function("function")
+        if self.match('VAR'):
+            return self.var_declaration()
+        return self.statement()
 
     def class_declaration(self):
         name = self.consume('IDENTIFIER', "Expect class name.")
@@ -267,10 +268,5 @@ class Parser:
     def is_at_end(self): return self.peek().type == "EOF"
     def previous(self): return self.tokens[self.current - 1]
     
-    def synchronize(self):
-        self.advance()
-        while not self.is_at_end():
-            if self.previous().type == 'SEMICOLON': return
-            if self.peek().type in ['CLASS', 'FUN', 'VAR', 'FOR', 'IF', 'WHILE', 'PRINT', 'RETURN']: return
-            self.advance()
+    # The synchronize method is removed to ensure the parser fails fast.
 
