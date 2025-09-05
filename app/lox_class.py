@@ -1,10 +1,10 @@
 from __future__ import annotations
-from typing import Dict, Any, TYPE_CHECKING
+from typing import Dict, Any
 from app.lox_callable import LoxCallable
 
-if TYPE_CHECKING:
-    from app.lox_function import LoxFunction
-    from app.lox_instance import LoxInstance
+
+from app.lox_function import LoxFunction
+from app.lox_instance import LoxInstance
 
 class LoxClass(LoxCallable):
     def __init__(self, name: str, methods: Dict[str, 'LoxFunction']):
