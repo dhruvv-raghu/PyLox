@@ -13,7 +13,7 @@ from app.lox_function import LoxFunction
 from app.lox_class import LoxClass
 from app.lox_instance import LoxInstance
 from typing import Dict, Any
-
+from scan_for.tokens import Token
 class NativeClock(LoxCallable):
     def arity(self) -> int: return 0
     def call(self, interpreter: Any, arguments: list) -> float: return time.time()
