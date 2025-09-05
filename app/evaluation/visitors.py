@@ -56,6 +56,10 @@ class Visitor(ABC):
         """Visit a 'this' keyword node in the AST."""
         pass
         
+   def visit_super(self, node):
+        """Visit a 'super' keyword node in the AST."""
+        pass
+        
 class StmtVisitor(ABC):
     
      @abstractmethod

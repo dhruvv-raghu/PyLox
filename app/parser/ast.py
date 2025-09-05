@@ -2,6 +2,7 @@ from app.evaluation.visitors import Visitor, StmtVisitor
 from typing import List, Optional
 from app.scan_for.tokens import Token
 
+
 # --- Base Classes ---
 class Expr:
     def accept(self, visitor: Visitor):
@@ -27,6 +28,13 @@ class Function(Stmt):
 
     def accept(self, visitor: StmtVisitor):
         return visitor.visit_function(self)
+
+class Super(Expr):
+    def __init__(self, keyword: Token, method: Token):
+        self.keyword = keyword
+        self.method = method
+    def accept(self, visitor: Visitor) : return visitor.visit_super(self)
+    
 
 class Return(Stmt):
     """AST node for a return statement."""
@@ -187,8 +195,9 @@ class This(Expr):
         return visitor.visit_this(self)
         
 class Class(Stmt):
-    def __init__(self, name: Token, methods: List[Function]):
+    def __init__(self, name: Token, superclass:Variable,  methods: List[Function]):
         self.name = name
         self.methods = methods
+        self.superclass = superclass
     def accept(self, visitor: StmtVisitor):
         return visitor.visit_class(self)

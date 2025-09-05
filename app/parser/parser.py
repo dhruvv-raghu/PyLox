@@ -2,7 +2,7 @@ import sys
 from app.parser.ast import (
     Expr, Stmt, Print, Expression, Literal, Grouping, Unary, Binary, Assign,
     Variable, Var, Block, If, Logical, While, Function, Return, Call, Class,
-    Get, Set, This
+    Get, Set, This, Super
 )
 from app.scan_for.tokens import Token
 
@@ -17,29 +17,36 @@ class Parser:
     def parse(self):
         statements = []
         while not self.is_at_end():
-            # The main loop now calls declaration, which will raise an error on failure.
             statements.append(self.declaration())
         return statements
 
     def declaration(self):
-        # --- FIX: Removed the internal try/except block ---
-        # This will now let ParseError exceptions propagate up to main.py
-        if self.match('CLASS'):
-            return self.class_declaration()
-        if self.match('FUN'):
-            return self.function("function")
-        if self.match('VAR'):
-            return self.var_declaration()
-        return self.statement()
+        try:
+            if self.match('CLASS'):
+                return self.class_declaration()
+            if self.match('FUN'):
+                return self.function("function")
+            if self.match('VAR'):
+                return self.var_declaration()
+            return self.statement()
+        except ParseError:
+            self.synchronize()
+            return None
 
     def class_declaration(self):
         name = self.consume('IDENTIFIER', "Expect class name.")
+        
+        superclass = None
+        if self.match('LESS'):
+            self.consume('IDENTIFIER', "Expect superclass name.")
+            superclass = Variable(self.previous())
+
         self.consume('LEFT_BRACE', "Expect '{' before class body.")
         methods = []
         while not self.check('RIGHT_BRACE') and not self.is_at_end():
             methods.append(self.function("method"))
         self.consume('RIGHT_BRACE', "Expect '}' after class body.")
-        return Class(name, methods)
+        return Class(name, superclass, methods)
 
     def function(self, kind: str):
         name = self.consume('IDENTIFIER', f"Expect {kind} name.")
@@ -47,11 +54,9 @@ class Parser:
         parameters = []
         if not self.check('RIGHT_PAREN'):
             while True:
-                if len(parameters) >= 255:
-                    self.error(self.peek(), "Can't have more than 255 parameters.")
+                if len(parameters) >= 255: self.error(self.peek(), "Can't have more than 255 parameters.")
                 parameters.append(self.consume('IDENTIFIER', "Expect parameter name."))
-                if not self.match('COMMA'):
-                    break
+                if not self.match('COMMA'): break
         self.consume('RIGHT_PAREN', "Expect ')' after parameters.")
         self.consume('LEFT_BRACE', f"Expect '{{' before {kind} body.")
         body = self.block()
@@ -83,15 +88,10 @@ class Parser:
         
         body = self.statement()
         
-        if increment is not None:
-            body = Block([body, Expression(increment)])
-        
+        if increment is not None: body = Block([body, Expression(increment)])
         if condition is None: condition = Literal(True)
         body = While(condition, body)
-        
-        if initializer is not None:
-            body = Block([initializer, body])
-        
+        if initializer is not None: body = Block([initializer, body])
         return body
 
     def if_statement(self):
@@ -100,8 +100,7 @@ class Parser:
         self.consume('RIGHT_PAREN', "Expect ')' after if condition.")
         then_branch = self.statement()
         else_branch = None
-        if self.match('ELSE'):
-            else_branch = self.statement()
+        if self.match('ELSE'): else_branch = self.statement()
         return If(condition, then_branch, else_branch)
 
     def while_statement(self):
@@ -121,8 +120,7 @@ class Parser:
     def var_declaration(self):
         name = self.consume('IDENTIFIER', "Expect variable name.")
         initializer = None
-        if self.match('EQUAL'):
-            initializer = self.expression()
+        if self.match('EQUAL'): initializer = self.expression()
         self.consume('SEMICOLON', "Expect ';' after variable declaration.")
         return Var(name, initializer)
 
@@ -134,8 +132,7 @@ class Parser:
     def return_statement(self):
         keyword = self.previous()
         value = None
-        if not self.check('SEMICOLON'):
-            value = self.expression()
+        if not self.check('SEMICOLON'): value = self.expression()
         self.consume('SEMICOLON', "Expect ';' after return value.")
         return Return(keyword, value)
 
@@ -144,73 +141,62 @@ class Parser:
         self.match('SEMICOLON')
         return Expression(expr)
 
-    def expression(self):
-        return self.assignment()
-
+    def expression(self): return self.assignment()
     def assignment(self):
         expr = self.logic_or()
         if self.match('EQUAL'):
             equals = self.previous()
             value = self.assignment()
-            if isinstance(expr, Variable):
-                return Assign(expr.name, value)
-            elif isinstance(expr, Get):
-                return Set(expr.obj, expr.name, value)
+            if isinstance(expr, Variable): return Assign(expr.name, value)
+            elif isinstance(expr, Get): return Set(expr.obj, expr.name, value)
             raise self.error(equals, "Invalid assignment target.")
         return expr
 
     def logic_or(self):
         expr = self.logic_and()
         while self.match('OR'):
-            operator = self.previous()
-            right = self.logic_and()
+            operator, right = self.previous(), self.logic_and()
             expr = Logical(expr, operator, right)
         return expr
 
     def logic_and(self):
         expr = self.equality()
         while self.match('AND'):
-            operator = self.previous()
-            right = self.equality()
+            operator, right = self.previous(), self.equality()
             expr = Logical(expr, operator, right)
         return expr
 
     def equality(self):
         expr = self.comparison()
         while self.match("EQUAL_EQUAL", "BANG_EQUAL"):
-            operator = self.previous()
-            right = self.comparison()
+            operator, right = self.previous(), self.comparison()
             expr = Binary(expr, operator, right)
         return expr
 
     def comparison(self):
         expr = self.term()
         while self.match("GREATER", "GREATER_EQUAL", "LESS", "LESS_EQUAL"):
-            operator = self.previous()
-            right = self.term()
+            operator, right = self.previous(), self.term()
             expr = Binary(expr, operator, right)
         return expr
 
     def term(self):
         expr = self.factor()
         while self.match("MINUS", "PLUS"):
-            operator = self.previous()
-            right = self.factor()
+            operator, right = self.previous(), self.factor()
             expr = Binary(expr, operator, right)
         return expr
 
     def factor(self):
         expr = self.unary()
         while self.match("SLASH", "STAR"):
-            operator = self.previous()
-            right = self.unary()
+            operator, right = self.previous(), self.unary()
             expr = Binary(expr, operator, right)
         return expr
 
     def unary(self):
         if self.match("BANG", "MINUS"):
-            operator = self.previous()
-            right = self.unary()
+            operator, right = self.previous(), self.unary()
             return Unary(operator, right)
         return self.call()
 
@@ -222,19 +208,16 @@ class Parser:
             elif self.match('DOT'):
                 name = self.consume('IDENTIFIER', "Expect property name after '.'.")
                 expr = Get(expr, name)
-            else:
-                break
+            else: break
         return expr
 
     def finish_call(self, callee: Expr):
         arguments = []
         if not self.check('RIGHT_PAREN'):
             while True:
-                if len(arguments) >= 255:
-                    self.error(self.peek(), "Can't have more than 255 arguments.")
+                if len(arguments) >= 255: self.error(self.peek(), "Can't have more than 255 arguments.")
                 arguments.append(self.expression())
-                if not self.match('COMMA'):
-                    break
+                if not self.match('COMMA'): break
         paren = self.consume('RIGHT_PAREN', "Expect ')' after arguments.")
         return Call(callee, paren, arguments)
 
@@ -243,6 +226,11 @@ class Parser:
         if self.match("FALSE"): return Literal(False)
         if self.match("NIL"): return Literal(None)
         if self.match("NUMBER", "STRING"): return Literal(self.previous().literal)
+        if self.match("SUPER"):
+            keyword = self.previous()
+            self.consume('DOT', "Expect '.' after 'super'.")
+            method = self.consume('IDENTIFIER', "Expect superclass method name.")
+            return Super(keyword, method)
         if self.match("THIS"): return This(self.previous())
         if self.match("IDENTIFIER"): return Variable(self.previous())
         if self.match('LEFT_PAREN'):
@@ -252,10 +240,8 @@ class Parser:
         raise self.error(self.peek(), "Expect expression.")
 
     def error(self, token, message):
-        if token.type == 'EOF':
-            print(f"[line {token.line}] Error at end: {message}", file=sys.stderr)
-        else:
-            print(f"[line {token.line}] Error at '{token.lexeme}': {message}", file=sys.stderr)
+        if token.type == 'EOF': print(f"[line {token.line}] Error at end: {message}", file=sys.stderr)
+        else: print(f"[line {token.line}] Error at '{token.lexeme}': {message}", file=sys.stderr)
         return ParseError()
 
     def consume(self, token_type, error_msg):
@@ -277,14 +263,14 @@ class Parser:
         if not self.is_at_end(): self.current += 1
         return self.previous()
 
-    def peek(self):
-        return self.tokens[self.current]
-
-    def is_at_end(self):
-        return self.peek().type == "EOF"
-
-    def previous(self):
-        return self.tokens[self.current - 1]
+    def peek(self): return self.tokens[self.current]
+    def is_at_end(self): return self.peek().type == "EOF"
+    def previous(self): return self.tokens[self.current - 1]
     
-    # --- FIX: Removed the synchronize method ---
+    def synchronize(self):
+        self.advance()
+        while not self.is_at_end():
+            if self.previous().type == 'SEMICOLON': return
+            if self.peek().type in ['CLASS', 'FUN', 'VAR', 'FOR', 'IF', 'WHILE', 'PRINT', 'RETURN']: return
+            self.advance()
 

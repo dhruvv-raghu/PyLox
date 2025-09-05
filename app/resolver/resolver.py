@@ -1,14 +1,15 @@
-import sys
+from __future__ import annotations
 from enum import Enum, auto
+import sys
 from typing import List, Dict
-
 from app.parser.ast import (
-    Expr, Stmt, Visitor, StmtVisitor, Block, Var, Variable, Assign, Function,
-    Expression, If, Print, Return, While, Binary, Call, Grouping, Literal,
-    Logical, Unary, Class, Get, Set, This
+    Expr, Stmt, Assign, Binary, Call, Get, Grouping, Literal, Logical, Set, Super,
+    This, Unary, Variable, Block, Class, Expression, Function, If,
+    Print, Return, Var, While
 )
-from app.scan_for.tokens import Token
+from app.evaluation.visitors import Visitor, StmtVisitor
 from app.evaluation.evaluator import Evaluator
+from app.scan_for.tokens import Token
 
 class FunctionType(Enum):
     NONE = auto()
@@ -19,6 +20,7 @@ class FunctionType(Enum):
 class ClassType(Enum):
     NONE = auto()
     CLASS = auto()
+    SUBCLASS = auto()
 
 class Resolver(Visitor, StmtVisitor):
     def __init__(self, evaluator: Evaluator):
@@ -29,6 +31,7 @@ class Resolver(Visitor, StmtVisitor):
         self.had_error = False
 
     def error(self, token: Token, message: str):
+        # In a real compiler, you'd have a better error reporting system.
         print(f"[line {token.line}] Error: {message}", file=sys.stderr)
         self.had_error = True
 
@@ -65,14 +68,14 @@ class Resolver(Visitor, StmtVisitor):
                 self.evaluator.resolve(expr, len(self.scopes) - 1 - i)
                 return
 
-    def resolve_function(self, function_node: Function, type: FunctionType):
+    def resolve_function(self, function: Function, func_type: FunctionType):
         enclosing_function = self.current_function
-        self.current_function = type
+        self.current_function = func_type
         self.begin_scope()
-        for param in function_node.params:
+        for param in function.params:
             self.declare(param)
             self.define(param)
-        self.resolve_statements(function_node.body)
+        self.resolve_statements(function.body)
         self.end_scope()
         self.current_function = enclosing_function
 
@@ -80,6 +83,37 @@ class Resolver(Visitor, StmtVisitor):
         self.begin_scope()
         self.resolve_statements(stmt.statements)
         self.end_scope()
+
+    def visit_class(self, stmt: Class):
+        enclosing_class = self.current_class
+        self.current_class = ClassType.CLASS
+        self.declare(stmt.name)
+        self.define(stmt.name)
+
+        if stmt.superclass is not None and stmt.name.lexeme == stmt.superclass.name.lexeme:
+            self.error(stmt.superclass.name, "A class can't inherit from itself.")
+        
+        if stmt.superclass is not None:
+            self.current_class = ClassType.SUBCLASS
+            self.resolve_expression(stmt.superclass)
+            self.begin_scope()
+            self.scopes[-1]["super"] = True
+
+        self.begin_scope()
+        self.scopes[-1]["this"] = True
+
+        for method in stmt.methods:
+            declaration = FunctionType.METHOD
+            if method.name.lexeme == "init":
+                declaration = FunctionType.INITIALIZER
+            self.resolve_function(method, declaration)
+        
+        self.end_scope()
+
+        if stmt.superclass is not None:
+            self.end_scope()
+        
+        self.current_class = enclosing_class
 
     def visit_var(self, stmt: Var):
         self.declare(stmt.name)
@@ -95,21 +129,6 @@ class Resolver(Visitor, StmtVisitor):
     def visit_assign(self, node: Assign):
         self.resolve_expression(node.value)
         self.resolve_local(node, node.name)
-        
-    def visit_class(self, stmt: Class):
-        enclosing_class = self.current_class
-        self.current_class = ClassType.CLASS
-        self.declare(stmt.name)
-        self.define(stmt.name)
-        self.begin_scope()
-        self.scopes[-1]["this"] = True
-        for method in stmt.methods:
-            declaration = FunctionType.METHOD
-            if method.name.lexeme == "init":
-                declaration = FunctionType.INITIALIZER
-            self.resolve_function(method, declaration)
-        self.end_scope()
-        self.current_class = enclosing_class
 
     def visit_function(self, stmt: Function):
         self.declare(stmt.name)
@@ -149,29 +168,36 @@ class Resolver(Visitor, StmtVisitor):
         for argument in node.arguments:
             self.resolve_expression(argument)
 
+    def visit_get(self, node: Get):
+        self.resolve_expression(node.obj)
+
     def visit_grouping(self, node: Grouping):
         self.resolve_expression(node.expression)
 
     def visit_literal(self, node: Literal):
-        pass
+        pass # Literals don't need resolving
 
     def visit_logical(self, node: Logical):
         self.resolve_expression(node.left)
         self.resolve_expression(node.right)
 
-    def visit_unary(self, node: Unary):
-        self.resolve_expression(node.right)
-
-    def visit_get(self, node: Get):
-        self.resolve_expression(node.obj)
-
     def visit_set(self, node: Set):
         self.resolve_expression(node.value)
         self.resolve_expression(node.obj)
+
+    def visit_super(self, node: Super):
+        if self.current_class == ClassType.NONE:
+            self.error(node.keyword, "Can't use 'super' outside of a class.")
+        elif self.current_class != ClassType.SUBCLASS:
+            self.error(node.keyword, "Can't use 'super' in a class with no superclass.")
+        self.resolve_local(node, node.keyword)
 
     def visit_this(self, node: This):
         if self.current_class == ClassType.NONE:
             self.error(node.keyword, "Can't use 'this' outside of a class.")
             return
         self.resolve_local(node, node.keyword)
+
+    def visit_unary(self, node: Unary):
+        self.resolve_expression(node.right)
 
